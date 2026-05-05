@@ -163,6 +163,9 @@ input[type="checkbox"]{accent-color:#0d7a5e;cursor:pointer;flex-shrink:0}
         </div>
       </div>
     </div>
+    <div class="panel-footer">
+      <button class="start-btn" id="extractBtn" onclick="runExtraction()" disabled style="background:#1460a8">Extract</button>
+    </div>
   </div>
 
   <!-- CENTER -->
@@ -398,15 +401,32 @@ async function addFiles(newFiles) {
     if (files.some(u=>u.name===f.name)) continue;
     const ext = f.name.split('.').pop().toLowerCase();
     const dn  = f.name.replace(/\.(pdf|docx|html?|txt)$/i,'').replace(/[_-]+/g,' ');
-    const entry = {file:f,name:f.name,ext,dn,hw4:null};
-    files.push(entry);
-    renderFilelist(); renderCandlist();
-    entry.hw4 = {action:'pending'};
-    renderCandItem(files.length-1);
-    entry.hw4 = await hw4Extract(f,ext);
-    renderCandItem(files.length-1);
-    updateBar(); syncBtn();
+    files.push({file:f,name:f.name,ext,dn,hw4:null});
   }
+  renderFilelist();
+  syncExtractBtn();
+}
+
+function syncExtractBtn(){
+  document.getElementById('extractBtn').disabled = files.length===0;
+}
+
+async function runExtraction(){
+  const btn=document.getElementById('extractBtn');
+  btn.disabled=true; btn.textContent='Extracting…';
+  for(let i=0;i<files.length;i++){
+    if(files[i].hw4&&files[i].hw4.action!=='pending') continue;
+    files[i].hw4={action:'pending'};
+    renderCandItem(i); updateBar();
+  }
+  for(let i=0;i<files.length;i++){
+    if(files[i].hw4?.action==='pending'){
+      files[i].hw4=await hw4Extract(files[i].file,files[i].ext);
+      renderCandItem(i); updateBar();
+    }
+  }
+  btn.disabled=false; btn.textContent='Extract';
+  syncBtn();
 }
 function removeFile(i){files.splice(i,1);renderFilelist();renderCandlist();updateBar();syncBtn();}
 
@@ -426,13 +446,14 @@ function renderFilelist(){
 // ─── Candidate list ───────────────────────────────────────────────────
 function renderCandlist(){
   const cl=document.getElementById('candList');
-  if(!files.length){
+  const hasExtracted=files.some(u=>u.hw4!==null);
+  if(!hasExtracted){
     cl.innerHTML=`<div class="empty-state" style="padding:40px 20px"><div class="es-icon">📄</div>Upload resumes on the left.<br/>The resume extractor analyzes<br/>each file before scoring.</div>`;
     document.getElementById('selectAll').checked=false;
     document.getElementById('extractBar').style.display='none'; return;
   }
   document.getElementById('extractBar').style.display='flex';
-  cl.innerHTML=files.map((_,i)=>candHTML(i)).join('');
+  cl.innerHTML=files.map((u,i)=>u.hw4?candHTML(i):'').join('');
   syncSelAll();
 }
 
@@ -474,6 +495,7 @@ function candHTML(i){
       ${flagsH?`<div class="flags-row">${flagsH}</div>`:''}
       ${injPrev}
     </div>
+    <button class="fi-rm" onclick="event.stopPropagation();removeFile(${i})" title="Remove" style="align-self:flex-start;margin-top:2px">&times;</button>
   </div>`;
 }
 
@@ -513,7 +535,7 @@ function updateBar(){
 function syncBtn(){
   const sel=document.querySelectorAll('.cand-item.sel').length;
   const jd=document.getElementById('jdInput').value.trim().length>10;
-  const done=files.every(u=>u.hw4&&u.hw4.action!=='pending');
+  const done=files.filter(u=>u.hw4).every(u=>u.hw4.action!=='pending');
   document.getElementById('startBtn').disabled=!sel||!jd||!done;
 }
 document.getElementById('jdInput').addEventListener('input',syncBtn);
