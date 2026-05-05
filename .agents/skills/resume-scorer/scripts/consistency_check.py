@@ -50,7 +50,7 @@ except ImportError:
 
 # Reuse scoring logic from score.py
 sys.path.insert(0, str(Path(__file__).parent))
-from score import load_prompt, score_resume
+from score import load_prompt, score_resume, DIMENSION_WEIGHTS
 
 
 DEFAULT_MODEL = "claude-sonnet-4-6"
@@ -137,7 +137,9 @@ def main():
                 model=args.model,
             )
             results.append(r)
-            print(f"score={r.get('score','?')}  confidence={r.get('confidence','?')}")
+            dims = r.get("dimensions", {})
+            dim_str = " ".join(f"{k[:4]}={v}" for k, v in dims.items())
+            print(f"score={r.get('score','?')} ({r.get('weighted_score','?')})  [{dim_str}]")
         except Exception as exc:
             print(f"ERROR: {exc}")
 
@@ -149,38 +151,52 @@ def main():
     # Analysis
     # ---------------------------------------------------------------------------
     scores = [r["score"] for r in results if isinstance(r.get("score"), int)]
+    weighted_scores = [r["weighted_score"] for r in results if isinstance(r.get("weighted_score"), float)]
     confidences = [r.get("confidence", "") for r in results]
     matched_lists = [r.get("matched_requirements", []) for r in results]
     gap_lists = [r.get("gaps", []) for r in results]
 
+    # Per-dimension variance
+    dim_variances = {}
+    for dim in DIMENSION_WEIGHTS:
+        dim_scores = [r["dimensions"][dim] for r in results if isinstance(r.get("dimensions", {}).get(dim), int)]
+        dim_variances[dim] = (max(dim_scores) - min(dim_scores)) if len(dim_scores) > 1 else 0
+
     score_variance = (max(scores) - min(scores)) if len(scores) > 1 else 0
+    weighted_variance = round(max(weighted_scores) - min(weighted_scores), 3) if len(weighted_scores) > 1 else 0
     most_common_conf = Counter(confidences).most_common(1)[0][0] if confidences else "?"
     conf_agreement = confidences.count(most_common_conf) / len(confidences) if confidences else 0
     matched_overlap = list_overlap(matched_lists)
     gap_overlap = list_overlap(gap_lists)
 
-    # Thresholds from scoring_anchors.md
-    PASS = {
-        "score_variance": (score_variance, "≤ 1", score_variance <= 1),
-        "confidence_agreement": (conf_agreement, "≥ 0.70", conf_agreement >= 0.70),
+    checks = {
+        "composite_score_variance":  (score_variance,    "≤ 1",    score_variance <= 1),
+        "weighted_score_variance":   (weighted_variance,  "≤ 1.0",  weighted_variance <= 1.0),
+        "confidence_agreement":      (conf_agreement,     "≥ 0.70", conf_agreement >= 0.70),
         "matched_requirements_overlap": (matched_overlap, "≥ 0.80", matched_overlap >= 0.80),
-        "gap_overlap": (gap_overlap, "≥ 0.70", gap_overlap >= 0.70),
+        "gap_overlap":               (gap_overlap,        "≥ 0.70", gap_overlap >= 0.70),
     }
+    for dim, var in dim_variances.items():
+        checks[f"dim_variance_{dim}"] = (var, "≤ 1", var <= 1)
 
     print("\n=== Consistency Report ===")
-    print(f"  Scores:    {scores}  (mean={statistics.mean(scores):.1f}, variance={score_variance})")
-    print(f"  Confidence distribution: {dict(Counter(confidences))}")
-    print()
+    print(f"  Composite scores:  {scores}  (mean={statistics.mean(scores):.2f}, range={score_variance})")
+    if weighted_scores:
+        print(f"  Weighted scores:   {[round(w,3) for w in weighted_scores]}  (range={weighted_variance})")
+    print(f"  Confidence:        {dict(Counter(confidences))}")
+    print(f"\n  Per-dimension variance (max–min across {len(results)} runs):")
+    for dim, var in dim_variances.items():
+        status = "ok" if var <= 1 else "FAIL"
+        print(f"    {dim:<24}  range={var}  [{status}]")
 
+    print()
     all_pass = True
-    for metric, (value, threshold, ok) in PASS.items():
+    for metric, (value, threshold, ok) in checks.items():
         status = "PASS" if ok else "FAIL"
         if not ok:
             all_pass = False
-        if isinstance(value, float):
-            print(f"  [{status}] {metric}: {value:.2f} (threshold {threshold})")
-        else:
-            print(f"  [{status}] {metric}: {value} (threshold {threshold})")
+        fmt = f"{value:.2f}" if isinstance(value, float) else str(value)
+        print(f"  [{status}] {metric}: {fmt} (threshold {threshold})")
 
     print()
     if all_pass:

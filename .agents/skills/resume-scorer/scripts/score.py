@@ -58,6 +58,15 @@ SKILLS_DIR = Path(__file__).resolve().parents[1]
 PROMPT_PATH = SKILLS_DIR / "prompts" / "score.md"
 DEFAULT_MODEL = "claude-sonnet-4-6"
 
+# Weights defined in CONTEXT.md — do not change without updating prompts/score.md
+DIMENSION_WEIGHTS = {
+    "required_skills":      0.25,
+    "experience_and_tenure": 0.25,
+    "achievements":         0.20,
+    "responsibilities":     0.20,
+    "preferred_skills":     0.10,
+}
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -93,6 +102,12 @@ def parse_llm_json(raw: str) -> dict:
 # Scoring
 # ---------------------------------------------------------------------------
 
+def compute_weighted_score(dimensions: dict) -> tuple[int, float]:
+    """Return (rounded integer score, raw float) from dimension scores."""
+    raw = sum(dimensions[k] * w for k, w in DIMENSION_WEIGHTS.items())
+    return round(raw), round(raw, 3)
+
+
 def score_resume(
     client: anthropic.Anthropic,
     resume_text: str,
@@ -113,11 +128,11 @@ def score_resume(
     response = client.messages.create(
         model=model,
         max_tokens=1024,
+        temperature=0,
         system=[
             {
                 "type": "text",
                 "text": system_prompt,
-                # Cache the system prompt — it's the same for every resume
                 "cache_control": {"type": "ephemeral"},
             }
         ],
@@ -128,10 +143,16 @@ def score_resume(
     result = parse_llm_json(raw_text)
     result["prompt_sha256"] = prompt_sha
 
-    # Attach usage metadata
+    # Compute weighted composite — math lives here, not in the prompt
+    dims = result.get("dimensions", {})
+    score, weighted_score = compute_weighted_score(dims)
+    result["score"] = score
+    result["weighted_score"] = weighted_score
+
     usage = response.usage
     result["_meta"] = {
         "model": model,
+        "temperature": 0,
         "input_tokens": usage.input_tokens,
         "output_tokens": usage.output_tokens,
         "cache_creation_input_tokens": getattr(usage, "cache_creation_input_tokens", 0),
@@ -216,10 +237,13 @@ def main():
             out_path.write_text(json.dumps(result, indent=2), encoding="utf-8")
 
             score = result.get("score", "?")
+            weighted = result.get("weighted_score", "?")
             conf = result.get("confidence", "?")
+            dims = result.get("dimensions", {})
+            dim_str = "  ".join(f"{k[:4]}={v}" for k, v in dims.items())
             cache_read = result["_meta"].get("cache_read_input_tokens", 0)
             cache_tag = f" [cache hit: {cache_read} tok]" if cache_read else ""
-            print(f"score={score}/5  confidence={conf}{cache_tag}")
+            print(f"score={score}/5 ({weighted})  {conf}  [{dim_str}]{cache_tag}")
             all_results.append(result)
 
         except Exception as exc:
@@ -241,11 +265,18 @@ def main():
     # Print leaderboard
     scored = [r for r in all_results if "score" in r]
     if scored:
-        scored.sort(key=lambda r: r["score"], reverse=True)
+        scored.sort(key=lambda r: r.get("weighted_score", 0), reverse=True)
         print("\n=== Leaderboard ===")
+        dim_keys = list(DIMENSION_WEIGHTS.keys())
+        header = f"  {'Name':<24}  {'Score':>5}  {'Weighted':>8}  " + \
+                 "  ".join(f"{k[:4]:>4}" for k in dim_keys)
+        print(header)
+        print("  " + "-" * (len(header) - 2))
         for r in scored:
-            name = r.get("candidate", r["resume_file"])
-            print(f"  {r['score']}/5  {r.get('confidence','?'):6}  {name}")
+            name = r.get("candidate", r["resume_file"])[:24]
+            dims = r.get("dimensions", {})
+            dim_vals = "  ".join(f"{dims.get(k,'?'):>4}" for k in dim_keys)
+            print(f"  {name:<24}  {r['score']:>5}  {r.get('weighted_score',0):>8.3f}  {dim_vals}")
 
 
 if __name__ == "__main__":
