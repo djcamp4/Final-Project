@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Talent Match Suite</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#dce3ed;min-height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.hdr{background:#0c1b35;color:#fff;padding:12px 20px;display:flex;align-items:center;gap:11px;flex-shrink:0}
+.hdr-logo{width:34px;height:34px;background:#1e567a;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.hdr h1{font-size:19px;font-weight:700;letter-spacing:-0.3px}
+.hdr-nb{margin-left:auto;display:flex;align-items:center;gap:7px;font-size:12.5px;color:#5a8ab0;font-weight:500}
+.sub{background:#121e30;color:#6a8ab0;padding:8px 20px;font-size:12px;flex-shrink:0;border-bottom:1px solid #0a1422}
+.main{display:grid;grid-template-columns:300px 1fr 1.15fr;gap:12px;padding:12px;flex:1;overflow:hidden;min-height:0}
+.panel{background:#fff;border-radius:11px;border:1px solid #cdd6e6;overflow:hidden;display:flex;flex-direction:column}
+.panel-body{padding:14px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:11px}
+.panel-hdr{padding:12px 14px 0;flex-shrink:0}
+.panel-title{font-size:15px;font-weight:700;color:#0c1b35}
+.upload-zone{border:2px dashed #bed0e4;border-radius:9px;padding:22px 14px;text-align:center;cursor:pointer;transition:all 0.18s;flex-shrink:0}
+.upload-zone:hover,.upload-zone.drag{border-color:#1460a8;background:#f0f6ff}
+.upl-art{display:flex;justify-content:center;margin-bottom:10px}
+.upl-btn{background:#142c58;color:#fff;border:none;padding:9px 24px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+.upl-btn:hover{background:#1a3870}
+.upl-hint{font-size:11.5px;color:#7a8fa8;margin-top:5px}
+.file-list{display:flex;flex-direction:column;gap:6px}
+.file-item{display:flex;align-items:center;gap:8px;padding:7px 9px;border:1px solid #e0e8f4;border-radius:7px;background:#fafbfd}
+.fi-icon{width:24px;height:24px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:8.5px;font-weight:800;flex-shrink:0}
+.fi-icon.pdf{background:#fee2e2;color:#c41a1a}
+.fi-icon.docx{background:#dbeafe;color:#1a4fa8}
+.fi-icon.html,.fi-icon.htm{background:#fde68a;color:#8a5a00}
+.fi-icon.txt{background:#d4f4dd;color:#147a3a}
+.fi-info{flex:1;min-width:0}
+.fi-name{font-size:12.5px;font-weight:500;color:#1a2a44;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fi-meta{font-size:10.5px;color:#8a9ab0}
+.fi-rm{background:none;border:none;cursor:pointer;color:#a0b0c4;font-size:17px;line-height:1;padding:0 2px;flex-shrink:0}
+.fi-rm:hover{color:#c41a1a}
+.file-count{text-align:center;font-size:12.5px;color:#4a6070;font-weight:600;padding:3px 0}
+.jd-wrap{border-top:1px solid #eaf0f8;padding-top:11px;display:flex;flex-direction:column;gap:5px}
+.label-sm{font-size:10.5px;font-weight:700;color:#5a7090;text-transform:uppercase;letter-spacing:0.5px}
+.jd-ta{width:100%;border:1px solid #c4d4e6;border-radius:7px;padding:8px 10px;font-size:12px;color:#1a2a44;resize:vertical;min-height:100px;max-height:160px;outline:none;font-family:inherit;line-height:1.5}
+.jd-ta:focus{border-color:#1460a8;box-shadow:0 0 0 2px rgba(20,96,168,0.1)}
+.jd-ta::placeholder{color:#a0b5cc}
+.dim-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:2px}
+.dim-item{display:flex;align-items:center;gap:5px;font-size:10.5px;color:#5a7090}
+.dim-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.ctr-toolbar{display:flex;align-items:center;gap:7px;padding:10px 14px 0;flex-shrink:0}
+.sel-all-lbl{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:#1a2a44;flex:1;cursor:pointer;user-select:none}
+.filter-btn{border:1px solid #c4d4e6;background:#fff;border-radius:6px;padding:4px 10px;font-size:11.5px;cursor:pointer;color:#4a6080}
+.filter-btn:hover{border-color:#8aabca}
+.extract-bar{display:flex;gap:8px;align-items:center;padding:7px 14px;background:#f6f9fd;border-bottom:1px solid #e4edf8;font-size:11.5px;flex-shrink:0}
+.stat-pill{display:flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;font-weight:600;font-size:10.5px}
+.sp-ok{background:#dcf5e8;color:#0a6030}
+.sp-rev{background:#fff4d4;color:#8a5a00}
+.sp-ref{background:#fee2e2;color:#8a1a1a}
+.cand-list{overflow-y:auto;flex:1}
+.cand-item{display:flex;align-items:flex-start;gap:9px;padding:9px 14px;border-bottom:1px solid #f0f4fb;cursor:pointer;transition:background 0.12s}
+.cand-item:hover:not(.refused):not(.analyzing){background:#f5f8ff}
+.cand-item.sel{background:#edf3ff}
+.cand-item.refused{cursor:default;opacity:0.55;background:#fafafa}
+.cand-item.analyzing{cursor:default;background:#fafcff}
+.cand-cb{margin-top:2px;flex-shrink:0;accent-color:#0d7a5e}
+.av{border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;margin-top:2px}
+.cand-info{flex:1;min-width:0}
+.cand-nm{font-size:13px;font-weight:600;color:#0c1b35}
+.cand-sub{font-size:11px;color:#7a90a8;margin-top:1px}
+.action-badge{display:inline-flex;align-items:center;gap:3px;border-radius:4px;padding:2px 7px;font-size:10px;font-weight:700;margin-top:4px}
+.ab-ok{background:#dcf5e8;color:#0a5a2a}
+.ab-rev{background:#fff4d4;color:#7a4a00}
+.ab-ref{background:#fee2e2;color:#8a1a1a}
+.ab-pend{background:#e8f0fb;color:#3a5a80}
+.flags-row{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px}
+.flag-chip{background:#fff3cd;color:#7a5200;border-radius:3px;padding:1px 6px;font-size:9.5px;font-weight:600}
+.flag-chip.inj{background:#ffe4e4;color:#8a1a1a}
+.inj-preview{font-size:10px;color:#8a4a00;font-style:italic;margin-top:3px;background:#fff9e6;border-left:2px solid #f4b000;padding:2px 6px;border-radius:0 3px 3px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.panel-footer{padding:11px 14px;border-top:1px solid #eaf0f8;flex-shrink:0}
+.start-btn{width:100%;background:#0d7a5e;color:#fff;border:none;padding:11px;border-radius:8px;font-size:13.5px;font-weight:700;cursor:pointer;transition:background 0.18s;letter-spacing:0.1px}
+.start-btn:hover:not(:disabled){background:#0a6450}
+.start-btn:disabled{background:#7ab5a8;cursor:not-allowed}
+.prog-wrap{display:flex;align-items:center;gap:9px;padding:8px 12px;background:#f4f8ff;border-radius:7px;font-size:12px;color:#3a5870;margin-bottom:9px}
+.spinner{border:2px solid #c8ddf0;border-top-color:#0d7a5e;border-radius:50%;animation:spin 0.65s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.pb-bg{flex:1;height:3px;background:#cde0f0;border-radius:2px;overflow:hidden}
+.pb-fill{height:100%;background:#0d7a5e;transition:width 0.3s}
+.results-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 14px 0;flex-shrink:0}
+.sort-btn{border:1px solid #c4d4e6;background:#fff;border-radius:6px;padding:4px 11px;font-size:11.5px;cursor:pointer;color:#4a6080}
+.empty-state{text-align:center;padding:48px 16px;color:#90a8c0;font-size:13px;line-height:1.7;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.es-icon{font-size:30px;margin-bottom:10px;opacity:0.45}
+.rtable{width:100%;border-collapse:collapse}
+.rtable th{font-size:10.5px;color:#8090a8;font-weight:600;text-align:left;padding:5px 8px;border-bottom:1px solid #e8f0fa;white-space:nowrap}
+.rtable td{padding:8px 8px;border-bottom:1px solid #f2f6fb;vertical-align:top}
+.rank-cell{display:flex;align-items:center;gap:4px}
+.star-btn{background:none;border:none;cursor:pointer;font-size:15px;padding:0;line-height:1;flex-shrink:0}
+.star-btn.on{color:#f4b400}
+.star-btn.off{color:#d0dce8}
+.rnum{font-size:13px;color:#3a5070;font-weight:700;min-width:14px}
+.cn{font-size:12.5px;font-weight:700;color:#0c1b35}
+.cr{font-size:10.5px;color:#6a8098;margin-top:2px;line-height:1.4}
+.hw4-flag{display:inline-flex;align-items:center;gap:3px;font-size:9.5px;font-weight:700;padding:1px 5px;border-radius:3px;margin-top:3px;margin-right:3px}
+.hw4-rev{background:#fff4d4;color:#7a4a00}
+.hw4-inj{background:#ffe4e4;color:#8a1a1a}
+.dims-row{display:flex;gap:3px;margin-top:3px;flex-wrap:wrap}
+.dbadge{font-size:9.5px;border-radius:3px;padding:1px 5px;font-weight:700}
+.sbar-wrap{display:flex;align-items:center;gap:5px}
+.sbar{height:9px;border-radius:4px;background:linear-gradient(90deg,#0d7a5e,#1dba8e);min-width:3px;transition:width 0.5s}
+.spct{font-size:12px;font-weight:700;color:#0a5a44;min-width:36px}
+.skill-wrap{display:flex;flex-wrap:wrap;gap:2px}
+.skbadge{background:#e8f2ff;color:#1a5090;border-radius:3px;padding:2px 6px;font-size:10px;font-weight:500;white-space:nowrap}
+input[type="checkbox"]{accent-color:#0d7a5e;cursor:pointer;flex-shrink:0}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-logo">
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <rect x="2" y="2" width="8" height="8" rx="2.5" fill="white" opacity="0.92"/>
+      <rect x="12" y="2" width="6" height="6" rx="1.5" fill="white" opacity="0.55"/>
+      <rect x="2" y="12" width="6" height="6" rx="1.5" fill="white" opacity="0.55"/>
+      <rect x="10" y="10" width="8" height="8" rx="2.5" fill="white" opacity="0.82"/>
+    </svg>
+  </div>
+  <h1>Talent Match Suite</h1>
+
+</div>
+<div class="sub">Match candidate resumes against job descriptions and rank results to find your best applicants.</div>
+
+<div class="main">
+
+  <!-- LEFT -->
+  <div class="panel">
+    <div class="panel-hdr"><div class="panel-title">Resume Input</div></div>
+    <div class="panel-body">
+      <div class="upload-zone" id="uploadZone">
+        <div class="upl-art">
+          <svg width="68" height="68" viewBox="0 0 68 68" fill="none">
+            <rect x="9" y="7" width="50" height="58" rx="7" fill="#cfe2f5" stroke="#96bcd6" stroke-width="1.5"/>
+            <rect x="16" y="20" width="24" height="3.5" rx="1.75" fill="#5088b0" opacity="0.8"/>
+            <rect x="16" y="28" width="36" height="3.5" rx="1.75" fill="#5088b0" opacity="0.7"/>
+            <rect x="16" y="36" width="30" height="3.5" rx="1.75" fill="#5088b0" opacity="0.6"/>
+            <circle cx="49" cy="50" r="14" fill="#142c58"/>
+            <path d="M49 43L49 57M43 50L49 43L55 50" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <button class="upl-btn" onclick="document.getElementById('fileInput').click()">Select Resumes</button>
+        <div class="upl-hint">Drag &amp; drop files or click to browse</div>
+        <input type="file" id="fileInput" multiple accept=".pdf,.docx,.html,.htm,.txt" style="display:none"/>
+      </div>
+      <div class="file-list" id="fileList"></div>
+      <div class="file-count" id="fileCount" style="display:none"></div>
+      <div class="jd-wrap">
+        <div class="label-sm">Job Description</div>
+        <textarea class="jd-ta" id="jdInput" placeholder="Paste the full job description here — required skills, preferred skills, responsibilities..."></textarea>
+        <div class="label-sm" style="margin-top:4px">Scoring weights</div>
+        <div class="dim-grid">
+          <div class="dim-item"><div class="dim-dot" style="background:#1dba8e"></div>Required Skills — 40%</div>
+          <div class="dim-item"><div class="dim-dot" style="background:#3a8ac8"></div>Preferred Skills — 10%</div>
+          <div class="dim-item"><div class="dim-dot" style="background:#f4a800"></div>Achievements — 25%</div>
+          <div class="dim-item"><div class="dim-dot" style="background:#9a5ae0"></div>Responsibilities — 25%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CENTER -->
+  <div class="panel">
+    <div class="panel-hdr"><div class="panel-title">Define Matching Run</div></div>
+    <div class="ctr-toolbar">
+      <label class="sel-all-lbl">
+        <input type="checkbox" id="selectAll" style="width:15px;height:15px" onchange="toggleSelectAll(this.checked)"/>
+        Select all
+      </label>
+      <button class="filter-btn">By Date ▾</button>
+      <button class="filter-btn">By Type ▾</button>
+    </div>
+    <div class="extract-bar" id="extractBar" style="display:none">
+      <span style="font-weight:700;color:#3a5070;font-size:11px">hw4 extractor</span>
+      <span class="stat-pill sp-ok" id="statOk">✅ 0 extract</span>
+      <span class="stat-pill sp-rev" id="statRev">🔶 0 review</span>
+      <span class="stat-pill sp-ref" id="statRef">⛔ 0 refuse</span>
+    </div>
+    <div class="cand-list" id="candList">
+      <div class="empty-state" style="padding:40px 20px">
+        <div class="es-icon">📄</div>
+        Upload resumes on the left.<br/>The hw4 extractor analyzes<br/>each file before scoring.
+      </div>
+    </div>
+    <div class="panel-footer">
+      <div id="progressWrap" style="display:none"></div>
+      <button class="start-btn" id="startBtn" onclick="startRun()" disabled>Start Matching Run</button>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="panel">
+    <div class="results-hdr">
+      <div class="panel-title">View Ranked Results</div>
+      <button class="sort-btn" id="sortBtn" onclick="toggleSort()">Sort all ▾</button>
+    </div>
+    <div id="resultsEmpty" class="empty-state">
+      <div class="es-icon">📊</div>
+      Run a matching session to<br/>see ranked results here
+    </div>
+    <div style="overflow-y:auto;flex:1;display:none" id="resultsScroll">
+      <table class="rtable" id="resultsTable">
+        <thead><tr>
+          <th>Rank ⇅</th><th></th><th>Candidate Name</th><th>Match Score</th><th>Key Skills</th>
+        </tr></thead>
+        <tbody id="resultsBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// hw4-DanCampbell resume-extractor — JS port
+// github.com/djcamp4/hw4-DanCampbell
+// ═══════════════════════════════════════════════════════
+
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// Constants matching extract.py exactly
+const HIDDEN_FONT_PT   = 1.0;
+const WHITE_LUM        = 0.95;
+const MIN_CHARS        = 300;
+const MIN_WORDS        = 60;
+
+const SECTION_HINTS = [
+  "experience","education","skills","employment","work history",
+  "summary","objective","projects","certifications","qualifications"
+];
+
+// Exact port of INJECTION_PATTERNS from extract.py
+const INJ_PATS = [
+  /ignore\b[^.\n]{0,60}?\b(instructions?|prompts?|rules?|system\s+prompt)/i,
+  /disregard\b[^.\n]{0,60}?\b(instructions?|prompts?|rules?|system\s+prompt|rubric)/i,
+  /you are now [a-z ]{0,40}(?:assistant|scorer|recruiter)/i,
+  /override\b[^.\n]{0,60}?\b(instructions?|system\s+prompt|rules?)/i,
+  /(give|assign|return)\b[^.\n]{0,80}?\b(highest|maximum|perfect|top)\s+(possible\s+)?score/i,
+  /score\b[^.\n]{0,40}?\b(a |as )?5\b/i,
+  /as (an|the) ai language model/i,
+  /system\s*:\s*you\b/i
+];
+
+function lum(rgb) {
+  return 0.2126*((rgb>>16&0xFF)/255) + 0.7152*((rgb>>8&0xFF)/255) + 0.0722*((rgb&0xFF)/255);
+}
+function hexLum(h) {
+  if (!h||h.length<6||h==='auto') return 0;
+  return 0.2126*(parseInt(h.slice(0,2),16)/255)
+       + 0.7152*(parseInt(h.slice(2,4),16)/255)
+       + 0.0722*(parseInt(h.slice(4,6),16)/255);
+}
+function scanInj(text) {
+  const found = new Set();
+  for (const p of INJ_PATS) { const m=text.match(p); if(m) found.add(m[0].trim().slice(0,120)); }
+  return [...found];
+}
+function classify(m) {
+  if (m.error) { m.action='refuse'; return; }
+  if (m.charCount<MIN_CHARS || m.wordCount<MIN_WORDS) { m.flags.push('too_short_for_resume'); m.action='refuse'; return; }
+  const lc = m.visibleText.toLowerCase();
+  const hits = SECTION_HINTS.filter(h=>lc.includes(h)).length;
+  if (hits===0) { m.flags.push('no_resume_sections_found'); m.action='refuse'; return; }
+  if (hits===1) m.flags.push('only_one_resume_section');
+  const injFound = scanInj(m.visibleText+'\n'+(m.hiddenExcerpts||[]).join('\n'));
+  if (injFound.length) { m.injectionPhrases=injFound; m.flags.push('possible_prompt_injection'); }
+  m.action = (m.flags.includes('hidden_text_detected')||m.flags.includes('possible_prompt_injection')) ? 'review' : 'extract';
+}
+
+async function extractPDF(file) {
+  const m = {flags:[],hiddenExcerpts:[],injectionPhrases:[],pageCount:0,error:null};
+  try {
+    const pdf = await pdfjsLib.getDocument({data: await file.arrayBuffer()}).promise;
+    m.pageCount = pdf.numPages;
+    const vis=[], hid=[];
+    for (let p=1;p<=pdf.numPages;p++) {
+      const pg = await pdf.getPage(p);
+      const ct = await pg.getTextContent();
+      for (const it of ct.items) {
+        if (!it.str.trim()) continue;
+        const [a,b] = it.transform;
+        const sz = Math.sqrt(a*a+b*b);
+        (sz < HIDDEN_FONT_PT ? hid : vis).push(it.str);
+      }
+      vis.push('\n');
+    }
+    if (hid.length) { m.flags.push('hidden_text_detected'); m.hiddenExcerpts=hid.slice(0,10).map(t=>t.slice(0,200)); }
+    m.visibleText = vis.join(' ');
+    m.charCount   = m.visibleText.length;
+    m.wordCount   = m.visibleText.split(/\s+/).filter(Boolean).length;
+    // Also scan for text-based injection in visible text
+    const injVis = scanInj(m.visibleText);
+    if (injVis.length) { m.injectionPhrases=[...new Set([...m.injectionPhrases,...injVis])]; if(!m.flags.includes('possible_prompt_injection')) m.flags.push('possible_prompt_injection'); }
+  } catch(e) { m.error=e.message; }
+  return m;
+}
+
+async function extractDOCX(file) {
+  const m = {flags:[],hiddenExcerpts:[],injectionPhrases:[],pageCount:0,error:null};
+  try {
+    const zip = await JSZip.loadAsync(await file.arrayBuffer());
+    const xmlF = zip.file('word/document.xml');
+    if (!xmlF) { m.error='word/document.xml missing'; return m; }
+    const xml = await xmlF.async('string');
+    const doc = new DOMParser().parseFromString(xml,'application/xml');
+    const vis=[], hid=[];
+    for (const para of doc.querySelectorAll('p')) {
+      for (const run of para.querySelectorAll('r')) {
+        const tEl = run.querySelector('t');
+        if (!tEl||!tEl.textContent.trim()) continue;
+        const text = tEl.textContent;
+        const rPr  = run.querySelector('rPr');
+        let hidden  = false;
+        if (rPr) {
+          if (rPr.querySelector('vanish')) hidden=true;
+          const cEl = rPr.querySelector('color');
+          if (cEl) { const v=cEl.getAttribute('w:val')||cEl.getAttribute('val')||''; if(v&&v!=='auto'&&hexLum(v)>=WHITE_LUM) hidden=true; }
+          const sEl = rPr.querySelector('sz');
+          if (sEl) { const s=parseInt(sEl.getAttribute('w:val')||sEl.getAttribute('val')||'24'); if(s<2) hidden=true; }
+        }
+        (hidden?hid:vis).push(text);
+      }
+      vis.push('\n');
+    }
+    if (hid.length) { m.flags.push('hidden_text_detected'); m.hiddenExcerpts=hid.slice(0,10).map(t=>t.slice(0,200)); }
+    m.visibleText = vis.join(' ');
+    m.charCount   = m.visibleText.length;
+    m.wordCount   = m.visibleText.split(/\s+/).filter(Boolean).length;
+  } catch(e) { m.error=e.message; }
+  return m;
+}
+
+const HIDDEN_EL_RE = /<([a-z][a-z0-9]*)\b[^>]*style\s*=\s*"[^"]*(?:display\s*:\s*none|visibility\s*:\s*hidden|color\s*:\s*#?(?:fff|ffffff|white)|font-size\s*:\s*0)[^"]*"[^>]*>([\s\S]*?)<\/\1\s*>/gi;
+const SS_RE        = /<(script|style)[^>]*>[\s\S]*?<\/\1\s*>/gi;
+const TAG_RE       = /<[^>]+>/g;
+
+async function extractHTML(file) {
+  const m = {flags:[],hiddenExcerpts:[],injectionPhrases:[],pageCount:0,error:null};
+  try {
+    const raw = await file.text();
+    const hid = [];
+    const cleaned = raw.replace(HIDDEN_EL_RE, (_,_t,inner) => {
+      const t=inner.replace(TAG_RE,' ').trim(); if(t) hid.push(t.slice(0,200)); return ' ';
+    });
+    if (hid.length) { m.flags.push('hidden_text_detected'); m.hiddenExcerpts=hid.slice(0,10); }
+    const text = cleaned.replace(SS_RE,'').replace(TAG_RE,' ').replace(/\s+/g,' ').trim();
+    m.visibleText=text; m.charCount=text.length; m.wordCount=text.split(/\s+/).filter(Boolean).length;
+  } catch(e) { m.error=e.message; }
+  return m;
+}
+
+async function extractTXT(file) {
+  const m = {flags:[],hiddenExcerpts:[],injectionPhrases:[],pageCount:0,error:null};
+  try { const t=await file.text(); m.visibleText=t; m.charCount=t.length; m.wordCount=t.split(/\s+/).filter(Boolean).length; }
+  catch(e) { m.error=e.message; }
+  return m;
+}
+
+async function hw4Extract(file, ext) {
+  let m;
+  if      (ext==='pdf')               m=await extractPDF(file);
+  else if (ext==='docx')              m=await extractDOCX(file);
+  else if (ext==='html'||ext==='htm') m=await extractHTML(file);
+  else if (ext==='txt')               m=await extractTXT(file);
+  else { m={flags:['unsupported_type'],hiddenExcerpts:[],injectionPhrases:[],pageCount:0,error:'Unsupported type',visibleText:'',charCount:0,wordCount:0}; }
+  m.action='extract';
+  classify(m);
+  return m;
+}
+
+// ─── App state ────────────────────────────────────────────────────────
+let files=[]; let allResults=[]; let starred=new Set(); let sortDesc=true;
+
+const AV_COLORS=[
+  ['#d5e4f0','#2a5070'],['#d5f0e5','#1a6040'],['#f0daf0','#602870'],
+  ['#f0e5d5','#6a3a10'],['#d5e8f8','#1a3a70'],['#fdeee4','#7a3a0a']
+];
+
+function ini(n){const p=n.trim().split(/\s+/);return p.length>=2?(p[0][0]+p[1][0]).toUpperCase():n.slice(0,2).toUpperCase();}
+function fmt(b){if(b<1024)return b+'B';if(b<1048576)return(b/1024).toFixed(1)+'KB';return(b/1048576).toFixed(1)+'MB';}
+
+// ─── Upload ───────────────────────────────────────────────────────────
+const fInput=document.getElementById('fileInput'), uZone=document.getElementById('uploadZone');
+fInput.addEventListener('change',e=>addFiles(Array.from(e.target.files)));
+uZone.addEventListener('dragover',e=>{e.preventDefault();uZone.classList.add('drag');});
+uZone.addEventListener('dragleave',()=>uZone.classList.remove('drag'));
+uZone.addEventListener('drop',e=>{e.preventDefault();uZone.classList.remove('drag');addFiles(Array.from(e.dataTransfer.files));});
+
+async function addFiles(newFiles) {
+  for (const f of newFiles) {
+    if (files.some(u=>u.name===f.name)) continue;
+    const ext = f.name.split('.').pop().toLowerCase();
+    const dn  = f.name.replace(/\.(pdf|docx|html?|txt)$/i,'').replace(/[_-]+/g,' ');
+    const entry = {file:f,name:f.name,ext,dn,hw4:null};
+    files.push(entry);
+    renderFilelist(); renderCandlist();
+    entry.hw4 = {action:'pending'};
+    renderCandItem(files.length-1);
+    entry.hw4 = await hw4Extract(f,ext);
+    renderCandItem(files.length-1);
+    updateBar(); syncBtn();
+  }
+}
+function removeFile(i){files.splice(i,1);renderFilelist();renderCandlist();updateBar();syncBtn();}
+
+function renderFilelist(){
+  const fl=document.getElementById('fileList'),fc=document.getElementById('fileCount');
+  if(!files.length){fl.innerHTML='';fc.style.display='none';return;}
+  fl.innerHTML=files.map((u,i)=>`
+    <div class="file-item">
+      <div class="fi-icon ${u.ext}">${u.ext.toUpperCase().slice(0,4)}</div>
+      <div class="fi-info"><div class="fi-name" title="${u.name}">${u.name}</div>
+      <div class="fi-meta">${fmt(u.file.size)} &bull; ${new Date(u.file.lastModified).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</div></div>
+      <button class="fi-rm" onclick="removeFile(${i})">&times;</button>
+    </div>`).join('');
+  fc.style.display='block'; fc.textContent=`${files.length} Resume${files.length!==1?'s':''} Uploaded`;
+}
+
+// ─── Candidate list ───────────────────────────────────────────────────
+function renderCandlist(){
+  const cl=document.getElementById('candList');
+  if(!files.length){
+    cl.innerHTML=`<div class="empty-state" style="padding:40px 20px"><div class="es-icon">📄</div>Upload resumes on the left.<br/>The hw4 extractor analyzes<br/>each file before scoring.</div>`;
+    document.getElementById('selectAll').checked=false;
+    document.getElementById('extractBar').style.display='none'; return;
+  }
+  document.getElementById('extractBar').style.display='flex';
+  cl.innerHTML=files.map((_,i)=>candHTML(i)).join('');
+  syncSelAll();
+}
+
+function renderCandItem(i){
+  const el=document.getElementById(`ci_${i}`);
+  if(el) el.outerHTML=candHTML(i);
+  else { const cl=document.getElementById('candList'); if(cl.querySelector('.empty-state'))cl.innerHTML=''; cl.insertAdjacentHTML('beforeend',candHTML(i)); }
+}
+
+function candHTML(i){
+  const u=files[i], hw4=u.hw4;
+  const ac=AV_COLORS[i%AV_COLORS.length];
+  const refused=hw4&&hw4.action==='refuse', pending=!hw4||hw4.action==='pending';
+  const canSel=!refused&&!pending;
+
+  let badge='', flagsH='', injPrev='';
+  if(pending){
+    badge=`<span class="action-badge ab-pend"><span class="spinner" style="width:9px;height:9px;border-width:1.5px;display:inline-block"></span> analyzing…</span>`;
+  } else {
+    const ic={extract:'✅',review:'🔶',refuse:'⛔'};
+    const lb={extract:'extract — safe to score',review:'review — human required',refuse:'refuse — not a resume'};
+    const cs={extract:'ab-ok',review:'ab-rev',refuse:'ab-ref'};
+    badge=`<span class="action-badge ${cs[hw4.action]}">${ic[hw4.action]} ${lb[hw4.action]}</span>`;
+    if(hw4.flags&&hw4.flags.length) flagsH=hw4.flags.map(f=>`<span class="flag-chip${f==='possible_prompt_injection'?' inj':''}">${f.replace(/_/g,' ')}</span>`).join('');
+    if(hw4.injectionPhrases&&hw4.injectionPhrases.length) injPrev=`<div class="inj-preview">⚠ "${hw4.injectionPhrases[0].slice(0,80)}"</div>`;
+    else if(hw4.hiddenExcerpts&&hw4.hiddenExcerpts.length) injPrev=`<div class="inj-preview">Hidden: "${hw4.hiddenExcerpts[0].slice(0,60)}"</div>`;
+  }
+
+  const sub=hw4&&!pending?`${u.ext.toUpperCase()} &bull; ${fmt(u.file.size)} &bull; ${hw4.wordCount||0} words`:`${u.ext.toUpperCase()} &bull; ${fmt(u.file.size)}`;
+  const cbH=canSel?`<input type="checkbox" class="cand-cb" style="width:15px;height:15px" checked id="cb_${i}" onclick="event.stopPropagation();toggleCb(${i})">`:`<input type="checkbox" class="cand-cb" style="width:15px;height:15px;opacity:0.3" disabled>`;
+
+  return `<div class="cand-item${refused?' refused':pending?' analyzing':' sel'}" id="ci_${i}" onclick="${canSel?`toggleCand(${i})`:''}">
+    ${cbH}
+    <div class="av" style="width:30px;height:30px;font-size:11px;background:${ac[0]};color:${ac[1]}">${ini(u.dn)}</div>
+    <div class="cand-info">
+      <div class="cand-nm">${u.dn}</div>
+      <div class="cand-sub">${sub}</div>
+      ${badge}
+      ${flagsH?`<div class="flags-row">${flagsH}</div>`:''}
+      ${injPrev}
+    </div>
+  </div>`;
+}
+
+function toggleCand(i){
+  const it=document.getElementById(`ci_${i}`), cb=document.getElementById(`cb_${i}`);
+  if(!it||!cb) return;
+  it.classList.toggle('sel'); cb.checked=it.classList.contains('sel');
+  syncSelAll(); syncBtn();
+}
+function toggleCb(i){
+  const it=document.getElementById(`ci_${i}`), cb=document.getElementById(`cb_${i}`);
+  if(!it||!cb) return;
+  it.classList.toggle('sel',cb.checked); syncSelAll(); syncBtn();
+}
+function toggleSelectAll(chk){
+  files.forEach((u,i)=>{
+    if(!u.hw4||u.hw4.action==='refuse'||u.hw4.action==='pending') return;
+    const it=document.getElementById(`ci_${i}`),cb=document.getElementById(`cb_${i}`);
+    if(it&&cb){it.classList.toggle('sel',chk);cb.checked=chk;}
+  }); syncBtn();
+}
+function syncSelAll(){
+  const elig=files.filter(u=>u.hw4&&u.hw4.action!=='refuse'&&u.hw4.action!=='pending').length;
+  const sel=document.querySelectorAll('.cand-item.sel').length;
+  const allCb=document.getElementById('selectAll');
+  allCb.checked=elig>0&&sel===elig; allCb.indeterminate=sel>0&&sel<elig;
+}
+function updateBar(){
+  const ok=files.filter(u=>u.hw4?.action==='extract').length;
+  const rv=files.filter(u=>u.hw4?.action==='review').length;
+  const rf=files.filter(u=>u.hw4?.action==='refuse').length;
+  document.getElementById('statOk').textContent=`✅ ${ok} extract`;
+  document.getElementById('statRev').textContent=`🔶 ${rv} review`;
+  document.getElementById('statRef').textContent=`⛔ ${rf} refuse`;
+  document.getElementById('extractBar').style.display=files.length?'flex':'none';
+}
+function syncBtn(){
+  const sel=document.querySelectorAll('.cand-item.sel').length;
+  const jd=document.getElementById('jdInput').value.trim().length>10;
+  const done=files.every(u=>u.hw4&&u.hw4.action!=='pending');
+  document.getElementById('startBtn').disabled=!sel||!jd||!done;
+}
+document.getElementById('jdInput').addEventListener('input',syncBtn);
+
+// ─── Scoring ──────────────────────────────────────────────────────────
+async function startRun(){
+  const jd=document.getElementById('jdInput').value.trim();
+  const selected=files.map((u,i)=>({u,i})).filter(({i})=>document.getElementById(`cb_${i}`)?.checked);
+  if(!selected.length){alert('Select at least one candidate.');return;}
+
+  allResults=[];
+  document.getElementById('resultsScroll').style.display='block';
+  document.getElementById('resultsEmpty').style.display='none';
+  document.getElementById('resultsBody').innerHTML='';
+
+  const btn=document.getElementById('startBtn'), prog=document.getElementById('progressWrap');
+  btn.disabled=true; btn.textContent='Running…'; prog.style.display='block';
+
+  for(let k=0;k<selected.length;k++){
+    const {u}=selected[k];
+    const pct=Math.round(k/selected.length*100);
+    prog.innerHTML=`<div class="prog-wrap"><div class="spinner" style="width:15px;height:15px"></div><div style="flex:1"><div style="font-size:11.5px;margin-bottom:3px">Scoring <strong>${u.dn}</strong> (${k+1}/${selected.length})</div><div class="pb-bg"><div class="pb-fill" style="width:${pct}%"></div></div></div><span style="font-size:11px;font-weight:700;color:#7a9ab0">${pct}%</span></div>`;
+    try {
+      const r=await scoreResume(u.hw4?.visibleText||'',jd,u.dn,u.hw4?.flags||[]);
+      r.dn=u.dn; r.fn=u.name; r.hw4Flags=u.hw4?.flags||[]; r.injPhrases=u.hw4?.injectionPhrases||[];
+      allResults.push(r);
+    } catch(e) {
+      allResults.push({dn:u.dn,fn:u.name,matchPercent:0,totalScore:0,keySkills:[],reasoning:'Error: '+e.message,requiredSkills:0,preferredSkills:0,achievements:0,responsibilities:0,hw4Flags:u.hw4?.flags||[],injPhrases:u.hw4?.injectionPhrases||[]});
+    }
+    renderResults();
+  }
+
+  prog.innerHTML=`<div class="prog-wrap" style="background:#f0faf6"><span style="font-weight:700;color:#0d7a5e;font-size:12px">✓ Complete — ${allResults.length} candidate${allResults.length!==1?'s':''} scored</span></div>`;
+  btn.disabled=false; btn.textContent='Start Matching Run';
+}
+
+async function scoreResume(text,jd,name,hw4Flags){
+  const flagNote=hw4Flags.length?`\n\nPRE-SCREEN (hw4 extractor): flags=[${hw4Flags.join(', ')}]. Score the clean visible text honestly but note flags in reasoning.`:'';
+  const resp=await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      model:"claude-sonnet-4-20250514",max_tokens:1024,
+      system:`You are an expert AI recruiter scoring resumes against job descriptions.
+
+RUBRIC (score 0.0–5.0 each):
+1. requiredSkills   (40%) — Must-have technical skills, certs, experience stated as required
+2. preferredSkills  (10%) — Bonus/nice-to-have qualifications
+3. achievements     (25%) — Quantifiable, role-relevant accomplishments
+4. responsibilities (25%) — How closely past duties match the job responsibilities
+
+totalScore = req*0.40 + pref*0.10 + ach*0.25 + resp*0.25
+matchPercent = round(totalScore/5*100)
+
+You receive CLEAN visible text only. Hidden/adversarial content was already stripped by the hw4-DanCampbell resume-extractor pre-processing layer.
+
+Return ONLY valid JSON (no markdown, no fences):
+{"candidateName":"","requiredSkills":0.0,"preferredSkills":0.0,"achievements":0.0,"responsibilities":0.0,"totalScore":0.0,"matchPercent":0,"keySkills":["up to 3"],"reasoning":"1-2 sentences","flag":null}`,
+      messages:[{role:"user",content:`JOB DESCRIPTION:\n${jd}${flagNote}\n\n---\nRESUME (${name}):\n${text.slice(0,5000)}`}]
+    })
+  });
+  if(!resp.ok) throw new Error(`API ${resp.status}`);
+  const data=await resp.json();
+  if(data.error) throw new Error(data.error.message);
+  const raw=data.content.find(b=>b.type==='text')?.text||'';
+  return JSON.parse(raw.replace(/```json|```/g,'').trim());
+}
+
+// ─── Render results ───────────────────────────────────────────────────
+function renderResults(){
+  const sorted=[...allResults].sort((a,b)=>sortDesc?b.matchPercent-a.matchPercent:a.matchPercent-b.matchPercent);
+  document.getElementById('resultsBody').innerHTML=sorted.map((r,rank)=>{
+    const pct=Math.max(0,Math.min(100,Math.round(r.matchPercent||0)));
+    const barW=Math.round(pct*0.8);
+    const ac=AV_COLORS[rank%AV_COLORS.length];
+    const arr=rank===0?'↑':pct>=75?'↑':pct<=25?'↓':'–';
+    const arrC=arr==='↑'?'#0d7a5e':arr==='↓'?'#c41a1a':'#9ab0c8';
+    let hw4H='';
+    if(r.injPhrases?.length)   hw4H+=`<span class="hw4-flag hw4-inj">⚠ injection detected</span>`;
+    if(r.hw4Flags?.includes('hidden_text_detected')) hw4H+=`<span class="hw4-flag hw4-rev">🔶 hidden text stripped</span>`;
+    const dims=[
+      {l:'Req',v:r.requiredSkills,c:'#1dba8e'},{l:'Pref',v:r.preferredSkills,c:'#3a8ac8'},
+      {l:'Ach',v:r.achievements,c:'#f4a800'},{l:'Resp',v:r.responsibilities,c:'#9a5ae0'}
+    ].map(d=>`<span class="dbadge" style="background:${d.c}18;color:${d.c}">${d.l} ${(+(d.v)||0).toFixed(1)}</span>`).join('');
+    const skills=(r.keySkills||[]).slice(0,3).map(s=>`<span class="skbadge">${s}</span>`).join('');
+    const strd=starred.has(r.fn);
+    return `<tr>
+      <td><div class="rank-cell"><button class="star-btn ${strd?'on':'off'}" onclick="toggleStar('${r.fn}',this)">★</button><span style="color:${arrC};font-size:10px;font-weight:800">${arr}</span><span class="rnum">${rank+1}</span></div></td>
+      <td><div style="width:28px;height:28px;border-radius:50%;background:${ac[0]};color:${ac[1]};display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700">${ini(r.dn||'')}</div></td>
+      <td>
+        <div class="cn">${r.dn}</div>
+        ${hw4H?`<div>${hw4H}</div>`:''}
+        <div class="cr">${(r.reasoning||'').slice(0,80)}${(r.reasoning||'').length>80?'…':''}</div>
+        <div class="dims-row">${dims}</div>
+      </td>
+      <td><div class="sbar-wrap"><div class="sbar" style="width:${barW}px"></div><span class="spct">${pct}%</span></div></td>
+      <td><div class="skill-wrap">${skills}</div></td>
+    </tr>`;
+  }).join('');
+}
+
+function toggleStar(fn,btn){if(starred.has(fn)){starred.delete(fn);btn.className='star-btn off';}else{starred.add(fn);btn.className='star-btn on';}}
+function toggleSort(){sortDesc=!sortDesc;document.getElementById('sortBtn').textContent=sortDesc?'Sort all ▾':'Sort all ▴';if(allResults.length)renderResults();}
+</script>
+</body>
+</html>
