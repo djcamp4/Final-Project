@@ -1,0 +1,152 @@
+TALENT MATCH SUITE — USER GUIDE
+================================
+
+WHAT IS THIS APP?
+-----------------
+Talent Match Suite is a two-stage AI resume scoring pipeline. It extracts
+clean text from resume files, screens for hidden content and prompt injection,
+then scores each resume against a job description using Claude AI. Results are
+ranked on a 0–5 scale across five weighted dimensions.
+
+
+GETTING STARTED (FIRST TIME SETUP)
+------------------------------------
+1. Clone the repository:
+   git clone https://github.com/djcamp4/Final-Project.git
+   cd Final-Project
+
+2. Install dependencies:
+   pip3 install -r requirements.txt
+
+3. Get an Anthropic API key:
+   - Go to https://console.anthropic.com
+   - Navigate to API Keys in the left sidebar
+   - Create a new key
+
+4. Create a .env file in the project folder:
+   ANTHROPIC_API_KEY=sk-ant-your-key-here
+
+   IMPORTANT: Never share your API key or commit it to GitHub.
+   Each person who uses the app needs their own key.
+
+
+STARTING THE APP
+----------------
+Open a terminal, navigate to the project folder, and run:
+
+   PORT=5001 python3 server.py
+
+Then open your browser and go to:
+
+   http://localhost:5001
+
+Note: Port 5000 is blocked by macOS AirPlay Receiver, so we use port 5001.
+If port 5001 is also taken, change the number (e.g. PORT=5002 python3 server.py).
+
+
+HOW TO USE THE APP
+------------------
+The app has three panels: Resume Input (left), Define Matching Run (center),
+and View Ranked Results (right).
+
+Step 1 — Upload Resumes
+  - Click "Select Resumes" or drag and drop files into the left panel.
+  - Supported formats: PDF, DOCX, HTML, TXT.
+  - Files appear in the list but are not analyzed yet.
+
+Step 2 — Extract
+  - Click the blue "Extract" button at the bottom of the left panel.
+  - The Resume Extractor analyzes each file and shows results in the
+    center panel with one of three classifications:
+      ✅ extract  — safe to score
+      🔶 review   — suspicious content detected; human sign-off required
+      ⛔ refuse   — not a resume (too short, wrong format, etc.)
+  - Only "extract" files are scored automatically.
+  - To remove a candidate from the run, click the × button on their card.
+
+Step 3 — Paste the Job Description
+  - Paste the full job description into the text box in the left panel.
+  - Include required skills, preferred skills, and responsibilities for
+    best results.
+
+Step 4 — Start Matching Run
+  - Select the candidates you want to score using the checkboxes.
+  - Click "Start Matching Run."
+  - Claude AI scores each resume. Progress is shown as it runs.
+
+Step 5 — View Results
+  - Results appear in the right panel, ranked by score.
+  - Each row shows: Rank | Candidate + dimension scores | Score | Summary
+
+
+UNDERSTANDING THE RESULTS
+--------------------------
+Scores are on a 0–5 scale:
+
+  5   Perfect match — exceeds all requirements
+  4   Strong match — meets most requirements, minor gaps
+  3   Adequate match — meets core requirements, some gaps
+  2   Partial match — significant gaps (human review required before rejection)
+  1   Poor match — does not satisfy the role
+  0   Error or unscored
+
+The score is a weighted composite of five dimensions:
+
+  Required Skills       25%   Must-have technical skills and certifications
+  Experience & Tenure   25%   Years of relevant experience and seniority
+  Achievements          20%   Measurable accomplishments and impact
+  Responsibilities      20%   How well past duties match the job
+  Preferred Skills      10%   Nice-to-have skills listed in the JD
+
+Each dimension is scored 1–5 by Claude. The weighted average is shown as X.X/5.
+
+The Match Summary column shows Claude's plain-English justification for the
+score, followed by key matched skills.
+
+NOTE: Scores are advisory only. The app never makes hire/no-hire
+recommendations. Any candidate scoring 2 or below must be reviewed by a
+human before a rejection decision is communicated.
+
+
+SHARING WITH SOMEONE ELSE
+--------------------------
+1. They clone the repo:
+   git clone https://github.com/djcamp4/Final-Project.git
+   cd Final-Project
+
+2. Install dependencies:
+   pip3 install -r requirements.txt
+
+3. They create their own .env file with their own API key:
+   ANTHROPIC_API_KEY=sk-ant-their-key-here
+
+4. Start the server:
+   PORT=5001 python3 server.py
+
+5. Open http://localhost:5001
+
+
+TROUBLESHOOTING
+---------------
+"Failed to fetch" error
+  - The server may not be running. Start it with: PORT=5001 python3 server.py
+  - Make sure you are accessing http://localhost:5001 in your browser,
+    not opening the HTML file directly from Finder.
+  - Try a hard refresh: Cmd + Shift + R
+
+Page looks outdated after changes
+  - Hard refresh: Cmd + Shift + R
+
+Port already in use
+  - Use a different port: PORT=5002 python3 server.py
+  - Then open http://localhost:5002
+
+API key not working
+  - Check your .env file is in the project root folder (Final-Project/)
+  - The file should contain exactly: ANTHROPIC_API_KEY=sk-ant-...
+  - Get a new key at https://console.anthropic.com if needed
+
+Files classified as "refuse"
+  - The file may be too short (under 300 characters / 60 words)
+  - It may not contain standard resume sections (Experience, Skills, etc.)
+  - Scanned image-only PDFs cannot be read and will be refused
