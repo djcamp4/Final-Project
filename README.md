@@ -23,10 +23,26 @@ assets/
 
 ```bash
 pip install -r requirements.txt
-cp .env.example .env          # then add your ANTHROPIC_API_KEY
 ```
 
-## Run
+Create a `.env` file at the repo root with your Anthropic API key:
+```
+ANTHROPIC_API_KEY=sk-ant-...
+```
+Get your key at [console.anthropic.com](https://console.anthropic.com) → API Keys.
+
+## Browser UI (recommended)
+
+```bash
+python3 server.py
+# Open http://localhost:5001
+```
+
+Upload resumes in the left panel, paste a job description, and click **Start Matching Run**. The resume extractor runs in the browser first, then Claude scores each file that passes.
+
+> If port 5001 is taken, set a different port: `PORT=5002 python3 server.py`
+
+## Command-line
 
 ```bash
 # Stage 1 — extract (no AI)
@@ -36,7 +52,7 @@ python3 .agents/skills/resume-extractor/scripts/extract.py assets/
 python3 .agents/skills/resume-scorer/scripts/score.py \
     assets/extracted/ job_description.txt
 
-# Consistency check (optional, after any prompt changes)
+# Consistency check (run after any prompt changes)
 python3 .agents/skills/resume-scorer/scripts/consistency_check.py \
     assets/extracted/clean_resume_jane_smith.txt \
     job_description.txt
@@ -52,9 +68,12 @@ python3 .agents/skills/resume-scorer/scripts/consistency_check.py \
     └── references/
         ├── compliance_guardrails.md    Legal/bias rules
         └── scoring_anchors.md         Calibration guide
+app/
+    talent_match_suite.html   Browser UI
 assets/
-    sample_resumes/       Input resumes
-    extracted/            Cleaned text + JSON scores
-job_description.txt       Target job description
+    sample_resumes/           Input resumes
+    extracted/                Cleaned text + JSON scores
+job_description.txt           Target job description
+server.py                     Local server (serves UI, proxies API calls)
 requirements.txt
 ```
