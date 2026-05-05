@@ -14,7 +14,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#dce3ed;min-height:1
 .hdr h1{font-size:19px;font-weight:700;letter-spacing:-0.3px}
 .hdr-nb{margin-left:auto;display:flex;align-items:center;gap:7px;font-size:12.5px;color:#5a8ab0;font-weight:500}
 .sub{background:#121e30;color:#6a8ab0;padding:8px 20px;font-size:12px;flex-shrink:0;border-bottom:1px solid #0a1422}
-.main{display:grid;grid-template-columns:300px 1fr 1.15fr;gap:12px;padding:12px;flex:1;overflow:hidden;min-height:0}
+.main{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;padding:12px;flex:1;overflow:hidden;min-height:0}
 .panel{background:#fff;border-radius:11px;border:1px solid #cdd6e6;overflow:hidden;display:flex;flex-direction:column}
 .panel-body{padding:14px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:11px}
 .panel-hdr{padding:12px 14px 0;flex-shrink:0}
@@ -155,10 +155,11 @@ input[type="checkbox"]{accent-color:#0d7a5e;cursor:pointer;flex-shrink:0}
         <textarea class="jd-ta" id="jdInput" placeholder="Paste the full job description here — required skills, preferred skills, responsibilities..."></textarea>
         <div class="label-sm" style="margin-top:4px">Scoring weights</div>
         <div class="dim-grid">
-          <div class="dim-item"><div class="dim-dot" style="background:#1dba8e"></div>Required Skills — 40%</div>
+          <div class="dim-item"><div class="dim-dot" style="background:#1dba8e"></div>Required Skills — 25%</div>
+          <div class="dim-item"><div class="dim-dot" style="background:#2a7ac8"></div>Experience &amp; Tenure — 25%</div>
+          <div class="dim-item"><div class="dim-dot" style="background:#f4a800"></div>Achievements — 20%</div>
+          <div class="dim-item"><div class="dim-dot" style="background:#9a5ae0"></div>Responsibilities — 20%</div>
           <div class="dim-item"><div class="dim-dot" style="background:#3a8ac8"></div>Preferred Skills — 10%</div>
-          <div class="dim-item"><div class="dim-dot" style="background:#f4a800"></div>Achievements — 25%</div>
-          <div class="dim-item"><div class="dim-dot" style="background:#9a5ae0"></div>Responsibilities — 25%</div>
         </div>
       </div>
     </div>
@@ -184,7 +185,7 @@ input[type="checkbox"]{accent-color:#0d7a5e;cursor:pointer;flex-shrink:0}
     <div class="cand-list" id="candList">
       <div class="empty-state" style="padding:40px 20px">
         <div class="es-icon">📄</div>
-        Upload resumes on the left.<br/>The hw4 extractor analyzes<br/>each file before scoring.
+        Upload resumes on the left.<br/>The resume extractor analyzes<br/>each file before scoring.
       </div>
     </div>
     <div class="panel-footer">
@@ -426,7 +427,7 @@ function renderFilelist(){
 function renderCandlist(){
   const cl=document.getElementById('candList');
   if(!files.length){
-    cl.innerHTML=`<div class="empty-state" style="padding:40px 20px"><div class="es-icon">📄</div>Upload resumes on the left.<br/>The hw4 extractor analyzes<br/>each file before scoring.</div>`;
+    cl.innerHTML=`<div class="empty-state" style="padding:40px 20px"><div class="es-icon">📄</div>Upload resumes on the left.<br/>The resume extractor analyzes<br/>each file before scoring.</div>`;
     document.getElementById('selectAll').checked=false;
     document.getElementById('extractBar').style.display='none'; return;
   }
@@ -540,7 +541,7 @@ async function startRun(){
       r.dn=u.dn; r.fn=u.name; r.hw4Flags=u.hw4?.flags||[]; r.injPhrases=u.hw4?.injectionPhrases||[];
       allResults.push(r);
     } catch(e) {
-      allResults.push({dn:u.dn,fn:u.name,matchPercent:0,totalScore:0,keySkills:[],reasoning:'Error: '+e.message,requiredSkills:0,preferredSkills:0,achievements:0,responsibilities:0,hw4Flags:u.hw4?.flags||[],injPhrases:u.hw4?.injectionPhrases||[]});
+      allResults.push({dn:u.dn,fn:u.name,match_percent:0,score:0,weighted_score:0,dimensions:{},matched_requirements:[],gaps:[],summary:'Error: '+e.message,hw4Flags:u.hw4?.flags||[],injPhrases:u.hw4?.injectionPhrases||[]});
     }
     renderResults();
   }
@@ -550,41 +551,21 @@ async function startRun(){
 }
 
 async function scoreResume(text,jd,name,hw4Flags){
-  const flagNote=hw4Flags.length?`\n\nPRE-SCREEN (hw4 extractor): flags=[${hw4Flags.join(', ')}]. Score the clean visible text honestly but note flags in reasoning.`:'';
-  const resp=await fetch("https://api.anthropic.com/v1/messages",{
-    method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({
-      model:"claude-sonnet-4-20250514",max_tokens:1024,
-      system:`You are an expert AI recruiter scoring resumes against job descriptions.
-
-RUBRIC (score 0.0–5.0 each):
-1. requiredSkills   (40%) — Must-have technical skills, certs, experience stated as required
-2. preferredSkills  (10%) — Bonus/nice-to-have qualifications
-3. achievements     (25%) — Quantifiable, role-relevant accomplishments
-4. responsibilities (25%) — How closely past duties match the job responsibilities
-
-totalScore = req*0.40 + pref*0.10 + ach*0.25 + resp*0.25
-matchPercent = round(totalScore/5*100)
-
-You receive CLEAN visible text only. Hidden/adversarial content was already stripped by the hw4-DanCampbell resume-extractor pre-processing layer.
-
-Return ONLY valid JSON (no markdown, no fences):
-{"candidateName":"","requiredSkills":0.0,"preferredSkills":0.0,"achievements":0.0,"responsibilities":0.0,"totalScore":0.0,"matchPercent":0,"keySkills":["up to 3"],"reasoning":"1-2 sentences","flag":null}`,
-      messages:[{role:"user",content:`JOB DESCRIPTION:\n${jd}${flagNote}\n\n---\nRESUME (${name}):\n${text.slice(0,5000)}`}]
-    })
+  const resp=await fetch('/api/score',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({resume_text:text,jd_text:jd})
   });
-  if(!resp.ok) throw new Error(`API ${resp.status}`);
   const data=await resp.json();
-  if(data.error) throw new Error(data.error.message);
-  const raw=data.content.find(b=>b.type==='text')?.text||'';
-  return JSON.parse(raw.replace(/```json|```/g,'').trim());
+  if(!resp.ok) throw new Error(data.error||`HTTP ${resp.status}`);
+  return data;
 }
 
 // ─── Render results ───────────────────────────────────────────────────
 function renderResults(){
-  const sorted=[...allResults].sort((a,b)=>sortDesc?b.matchPercent-a.matchPercent:a.matchPercent-b.matchPercent);
+  const sorted=[...allResults].sort((a,b)=>sortDesc?(b.match_percent||0)-(a.match_percent||0):(a.match_percent||0)-(b.match_percent||0));
   document.getElementById('resultsBody').innerHTML=sorted.map((r,rank)=>{
-    const pct=Math.max(0,Math.min(100,Math.round(r.matchPercent||0)));
+    const pct=Math.max(0,Math.min(100,Math.round(r.match_percent||0)));
     const barW=Math.round(pct*0.8);
     const ac=AV_COLORS[rank%AV_COLORS.length];
     const arr=rank===0?'↑':pct>=75?'↑':pct<=25?'↓':'–';
@@ -592,11 +573,15 @@ function renderResults(){
     let hw4H='';
     if(r.injPhrases?.length)   hw4H+=`<span class="hw4-flag hw4-inj">⚠ injection detected</span>`;
     if(r.hw4Flags?.includes('hidden_text_detected')) hw4H+=`<span class="hw4-flag hw4-rev">🔶 hidden text stripped</span>`;
+    const _d=r.dimensions||{};
     const dims=[
-      {l:'Req',v:r.requiredSkills,c:'#1dba8e'},{l:'Pref',v:r.preferredSkills,c:'#3a8ac8'},
-      {l:'Ach',v:r.achievements,c:'#f4a800'},{l:'Resp',v:r.responsibilities,c:'#9a5ae0'}
+      {l:'Req', v:_d.required_skills,       c:'#1dba8e'},
+      {l:'Exp', v:_d.experience_and_tenure, c:'#2a7ac8'},
+      {l:'Ach', v:_d.achievements,          c:'#f4a800'},
+      {l:'Resp',v:_d.responsibilities,      c:'#9a5ae0'},
+      {l:'Pref',v:_d.preferred_skills,      c:'#3a8ac8'},
     ].map(d=>`<span class="dbadge" style="background:${d.c}18;color:${d.c}">${d.l} ${(+(d.v)||0).toFixed(1)}</span>`).join('');
-    const skills=(r.keySkills||[]).slice(0,3).map(s=>`<span class="skbadge">${s}</span>`).join('');
+    const skills=(r.matched_requirements||[]).slice(0,3).map(s=>`<span class="skbadge">${s}</span>`).join('');
     const strd=starred.has(r.fn);
     return `<tr>
       <td><div class="rank-cell"><button class="star-btn ${strd?'on':'off'}" onclick="toggleStar('${r.fn}',this)">★</button><span style="color:${arrC};font-size:10px;font-weight:800">${arr}</span><span class="rnum">${rank+1}</span></div></td>
@@ -604,7 +589,7 @@ function renderResults(){
       <td>
         <div class="cn">${r.dn}</div>
         ${hw4H?`<div>${hw4H}</div>`:''}
-        <div class="cr">${(r.reasoning||'').slice(0,80)}${(r.reasoning||'').length>80?'…':''}</div>
+        <div class="cr">${(r.summary||'').slice(0,80)}${(r.summary||'').length>80?'…':''}</div>
         <div class="dims-row">${dims}</div>
       </td>
       <td><div class="sbar-wrap"><div class="sbar" style="width:${barW}px"></div><span class="spct">${pct}%</span></div></td>
