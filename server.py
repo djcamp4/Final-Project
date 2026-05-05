@@ -33,7 +33,7 @@ def _load_dotenv():
         if env_file.exists():
             try:
                 from dotenv import load_dotenv
-                load_dotenv(env_file)
+                load_dotenv(env_file, override=True)
             except ImportError:
                 for line in env_file.read_text().splitlines():
                     line = line.strip()
