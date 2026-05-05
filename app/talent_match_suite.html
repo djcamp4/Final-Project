@@ -14,7 +14,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#dce3ed;min-height:1
 .hdr h1{font-size:19px;font-weight:700;letter-spacing:-0.3px}
 .hdr-nb{margin-left:auto;display:flex;align-items:center;gap:7px;font-size:12.5px;color:#5a8ab0;font-weight:500}
 .sub{background:#121e30;color:#6a8ab0;padding:8px 20px;font-size:12px;flex-shrink:0;border-bottom:1px solid #0a1422}
-.main{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;padding:12px;flex:1;overflow:hidden;min-height:0}
+.main{display:grid;grid-template-columns:2fr 2fr 3fr;gap:12px;padding:12px;flex:1;overflow:hidden;min-height:0}
 .panel{background:#fff;border-radius:11px;border:1px solid #cdd6e6;overflow:hidden;display:flex;flex-direction:column}
 .panel-body{padding:14px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:11px}
 .panel-hdr{padding:12px 14px 0;flex-shrink:0}
@@ -210,7 +210,7 @@ input[type="checkbox"]{accent-color:#0d7a5e;cursor:pointer;flex-shrink:0}
     <div style="overflow-y:auto;flex:1;display:none" id="resultsScroll">
       <table class="rtable" id="resultsTable">
         <thead><tr>
-          <th>Rank ⇅</th><th></th><th>Candidate Name</th><th>Match Score</th><th>Key Skills</th>
+          <th>Rank ⇅</th><th>Candidate</th><th>Score</th><th>Match Summary</th>
         </tr></thead>
         <tbody id="resultsBody"></tbody>
       </table>
@@ -585,12 +585,12 @@ async function scoreResume(text,jd,name,hw4Flags){
 
 // ─── Render results ───────────────────────────────────────────────────
 function renderResults(){
-  const sorted=[...allResults].sort((a,b)=>sortDesc?(b.match_percent||0)-(a.match_percent||0):(a.match_percent||0)-(b.match_percent||0));
+  const sorted=[...allResults].sort((a,b)=>sortDesc?(b.weighted_score||0)-(a.weighted_score||0):(a.weighted_score||0)-(b.weighted_score||0));
   document.getElementById('resultsBody').innerHTML=sorted.map((r,rank)=>{
-    const pct=Math.max(0,Math.min(100,Math.round(r.match_percent||0)));
-    const barW=Math.round(pct*0.8);
+    const wscore=Math.max(0,Math.min(5,+(r.weighted_score||0)));
+    const barW=Math.round(wscore/5*80);
     const ac=AV_COLORS[rank%AV_COLORS.length];
-    const arr=rank===0?'↑':pct>=75?'↑':pct<=25?'↓':'–';
+    const arr=rank===0?'↑':wscore>=3.75?'↑':wscore<=1.25?'↓':'–';
     const arrC=arr==='↑'?'#0d7a5e':arr==='↓'?'#c41a1a':'#9ab0c8';
     let hw4H='';
     if(r.injPhrases?.length)   hw4H+=`<span class="hw4-flag hw4-inj">⚠ injection detected</span>`;
@@ -607,15 +607,21 @@ function renderResults(){
     const strd=starred.has(r.fn);
     return `<tr>
       <td><div class="rank-cell"><button class="star-btn ${strd?'on':'off'}" onclick="toggleStar('${r.fn}',this)">★</button><span style="color:${arrC};font-size:10px;font-weight:800">${arr}</span><span class="rnum">${rank+1}</span></div></td>
-      <td><div style="width:28px;height:28px;border-radius:50%;background:${ac[0]};color:${ac[1]};display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700">${ini(r.dn||'')}</div></td>
       <td>
-        <div class="cn">${r.dn}</div>
-        ${hw4H?`<div>${hw4H}</div>`:''}
-        <div class="cr">${(r.summary||'').slice(0,80)}${(r.summary||'').length>80?'…':''}</div>
+        <div class="cn" style="margin-bottom:5px">${r.dn}</div>
+        ${hw4H?`<div style="margin-bottom:4px">${hw4H}</div>`:''}
         <div class="dims-row">${dims}</div>
       </td>
-      <td><div class="sbar-wrap"><div class="sbar" style="width:${barW}px"></div><span class="spct">${pct}%</span></div></td>
-      <td><div class="skill-wrap">${skills}</div></td>
+      <td style="white-space:nowrap">
+        <div class="sbar-wrap" style="flex-direction:column;align-items:flex-start;gap:4px">
+          <div class="sbar" style="width:${barW}px"></div>
+          <span class="spct">${Number.isInteger(wscore)?wscore:wscore.toFixed(1)}/5</span>
+        </div>
+      </td>
+      <td>
+        <div class="cr">${r.summary||''}</div>
+        <div class="skill-wrap" style="margin-top:6px">${skills}</div>
+      </td>
     </tr>`;
   }).join('');
 }
