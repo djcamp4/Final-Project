@@ -153,6 +153,10 @@ input[type="checkbox"]{accent-color:#0d7a5e;cursor:pointer;flex-shrink:0}
       <div class="jd-wrap">
         <div class="label-sm">Job Description</div>
         <textarea class="jd-ta" id="jdInput" placeholder="Paste the full job description here — required skills, preferred skills, responsibilities..."></textarea>
+        <div class="label-sm" style="margin-top:8px">AI Provider</div>
+        <select id="providerSelect" style="width:100%;border:1px solid #c4d4e6;border-radius:7px;padding:6px 8px;font-size:12.5px;color:#1a2a44;background:#fff;outline:none;margin-bottom:4px">
+          <option value="anthropic">Loading…</option>
+        </select>
         <div class="label-sm" style="margin-top:4px">Scoring weights</div>
         <div class="dim-grid">
           <div class="dim-item"><div class="dim-dot" style="background:#1dba8e"></div>Required Skills — 25%</div>
@@ -572,11 +576,28 @@ async function startRun(){
   btn.disabled=false; btn.textContent='Start Matching Run';
 }
 
+async function loadProviders(){
+  try{
+    const resp=await fetch('/api/providers');
+    const data=await resp.json();
+    const sel=document.getElementById('providerSelect');
+    if(data.providers&&data.providers.length){
+      sel.innerHTML=data.providers.map(p=>`<option value="${p.id}">${p.label}</option>`).join('');
+    } else {
+      sel.innerHTML='<option value="">No API keys configured</option>';
+    }
+  } catch(e){
+    document.getElementById('providerSelect').innerHTML='<option value="anthropic">Anthropic (default)</option>';
+  }
+}
+loadProviders();
+
 async function scoreResume(text,jd,name,hw4Flags){
+  const provider=document.getElementById('providerSelect').value;
   const resp=await fetch('/api/score',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({resume_text:text,jd_text:jd})
+    body:JSON.stringify({resume_text:text,jd_text:jd,provider})
   });
   const data=await resp.json();
   if(!resp.ok) throw new Error(data.error||`HTTP ${resp.status}`);

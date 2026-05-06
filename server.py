@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
 """
 Talent Match Suite — local server
-Serves the browser UI and proxies LLM scoring to Anthropic.
+Supports Anthropic, OpenAI, and Google Gemini.
 
 Usage:
     python3 server.py
-    Open http://localhost:5000
+    Open http://localhost:5001
+
+API keys go in .env — only providers with a key configured will appear in the UI.
+    ANTHROPIC_API_KEY=sk-ant-...
+    OPENAI_API_KEY=sk-...
+    GOOGLE_API_KEY=...
 """
 
 import json
@@ -26,6 +31,28 @@ DIMENSION_WEIGHTS = {
     "preferred_skills":      0.10,
 }
 
+PROVIDERS = {
+    "anthropic": {
+        "label":   "Anthropic — Claude Sonnet",
+        "key_env": "ANTHROPIC_API_KEY",
+        "model":   "claude-sonnet-4-6",
+    },
+    "openai": {
+        "label":   "OpenAI — GPT-4o",
+        "key_env": "OPENAI_API_KEY",
+        "model":   "gpt-4o",
+    },
+    "google": {
+        "label":   "Google — Gemini 1.5 Pro",
+        "key_env": "GOOGLE_API_KEY",
+        "model":   "gemini-1.5-pro",
+    },
+}
+
+
+# ---------------------------------------------------------------------------
+# .env loader
+# ---------------------------------------------------------------------------
 
 def _load_dotenv():
     for parent in [BASE, *BASE.parents]:
@@ -46,23 +73,131 @@ def _load_dotenv():
 _load_dotenv()
 
 try:
-    import anthropic as _anthropic
-except ImportError:
-    print("Error: anthropic package not installed. Run: pip install anthropic flask")
-    sys.exit(1)
-
-try:
     from flask import Flask, request, jsonify, send_from_directory
 except ImportError:
-    print("Error: flask not installed. Run: pip install anthropic flask")
+    print("Error: flask not installed. Run: pip3 install -r requirements.txt")
     sys.exit(1)
 
 app = Flask(__name__)
 
 
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def get_available_providers():
+    """Return providers that have an API key configured."""
+    return [
+        {"id": pid, "label": p["label"]}
+        for pid, p in PROVIDERS.items()
+        if os.environ.get(p["key_env"])
+    ]
+
+
+def parse_llm_json(raw: str) -> dict:
+    raw = raw.strip()
+    if raw.startswith("```"):
+        lines = raw.splitlines()
+        raw = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
+    return json.loads(raw)
+
+
+# ---------------------------------------------------------------------------
+# Provider scoring functions
+# ---------------------------------------------------------------------------
+
+def score_anthropic(prompt_text, user_msg, model):
+    try:
+        import anthropic as _anthropic
+    except ImportError:
+        raise RuntimeError("anthropic not installed — run: pip3 install anthropic")
+
+    client   = _anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+    response = client.messages.create(
+        model=model,
+        max_tokens=1024,
+        temperature=0,
+        system=[{
+            "type": "text",
+            "text": prompt_text,
+            "cache_control": {"type": "ephemeral"},
+        }],
+        messages=[{"role": "user", "content": user_msg}],
+    )
+    raw   = response.content[0].text
+    usage = response.usage
+    meta  = {
+        "input_tokens":                usage.input_tokens,
+        "output_tokens":               usage.output_tokens,
+        "cache_creation_input_tokens": getattr(usage, "cache_creation_input_tokens", 0),
+        "cache_read_input_tokens":     getattr(usage, "cache_read_input_tokens", 0),
+    }
+    return raw, meta
+
+
+def score_openai(prompt_text, user_msg, model):
+    try:
+        from openai import OpenAI
+    except ImportError:
+        raise RuntimeError("openai not installed — run: pip3 install openai")
+
+    client   = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+    response = client.chat.completions.create(
+        model=model,
+        temperature=0,
+        messages=[
+            {"role": "system", "content": prompt_text},
+            {"role": "user",   "content": user_msg},
+        ],
+    )
+    raw   = response.choices[0].message.content
+    usage = response.usage
+    meta  = {
+        "input_tokens":  usage.prompt_tokens,
+        "output_tokens": usage.completion_tokens,
+    }
+    return raw, meta
+
+
+def score_google(prompt_text, user_msg, model):
+    try:
+        import google.generativeai as genai
+    except ImportError:
+        raise RuntimeError("google-generativeai not installed — run: pip3 install google-generativeai")
+
+    genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
+    gmodel   = genai.GenerativeModel(model, system_instruction=prompt_text)
+    response = gmodel.generate_content(
+        user_msg,
+        generation_config=genai.GenerationConfig(temperature=0),
+    )
+    raw  = response.text
+    meta = {
+        "input_tokens":  response.usage_metadata.prompt_token_count,
+        "output_tokens": response.usage_metadata.candidates_token_count,
+    }
+    return raw, meta
+
+
+SCORE_FNS = {
+    "anthropic": score_anthropic,
+    "openai":    score_openai,
+    "google":    score_google,
+}
+
+
+# ---------------------------------------------------------------------------
+# Routes
+# ---------------------------------------------------------------------------
+
 @app.route("/")
 def index():
     return send_from_directory(APP_DIR, "talent_match_suite.html")
+
+
+@app.route("/api/providers")
+def api_providers():
+    return jsonify({"providers": get_available_providers()})
 
 
 @app.route("/api/score", methods=["POST"])
@@ -70,13 +205,17 @@ def api_score():
     data        = request.get_json(force=True) or {}
     resume_text = (data.get("resume_text") or "").strip()
     jd_text     = (data.get("jd_text") or "").strip()
+    provider_id = (data.get("provider") or "anthropic").lower()
 
     if not resume_text or not jd_text:
         return jsonify({"error": "resume_text and jd_text are required"}), 400
 
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
-    if not api_key:
-        return jsonify({"error": "ANTHROPIC_API_KEY not set — add it to .env"}), 500
+    if provider_id not in PROVIDERS:
+        return jsonify({"error": f"Unknown provider: {provider_id}"}), 400
+
+    provider = PROVIDERS[provider_id]
+    if not os.environ.get(provider["key_env"]):
+        return jsonify({"error": f"{provider['key_env']} not set in .env"}), 500
 
     if not PROMPT_PATH.exists():
         return jsonify({"error": f"System prompt not found: {PROMPT_PATH}"}), 500
@@ -84,7 +223,6 @@ def api_score():
     prompt_text = PROMPT_PATH.read_text(encoding="utf-8")
     prompt_sha  = hashlib.sha256(PROMPT_PATH.read_bytes()).hexdigest()
 
-    client   = _anthropic.Anthropic(api_key=api_key)
     user_msg = (
         "## Job Description\n\n"
         + jd_text
@@ -93,27 +231,12 @@ def api_score():
     )
 
     try:
-        response = client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=1024,
-            temperature=0,
-            system=[{
-                "type": "text",
-                "text": prompt_text,
-                "cache_control": {"type": "ephemeral"},
-            }],
-            messages=[{"role": "user", "content": user_msg}],
-        )
+        raw, usage_meta = SCORE_FNS[provider_id](prompt_text, user_msg, provider["model"])
     except Exception as exc:
         return jsonify({"error": str(exc)}), 502
 
-    raw = response.content[0].text.strip()
-    if raw.startswith("```"):
-        lines = raw.splitlines()
-        raw = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
-
     try:
-        result = json.loads(raw)
+        result = parse_llm_json(raw)
     except json.JSONDecodeError as exc:
         return jsonify({"error": f"Model returned invalid JSON: {exc}", "raw": raw}), 502
 
@@ -125,20 +248,23 @@ def api_score():
     result["weighted_score"] = round(raw_score, 3)
     result["match_percent"]  = round(raw_score / 5 * 100)
 
-    usage = response.usage
     result["_meta"] = {
-        "model":                       "claude-sonnet-4-6",
-        "temperature":                 0,
-        "input_tokens":                usage.input_tokens,
-        "output_tokens":               usage.output_tokens,
-        "cache_creation_input_tokens": getattr(usage, "cache_creation_input_tokens", 0),
-        "cache_read_input_tokens":     getattr(usage, "cache_read_input_tokens", 0),
+        "provider":    provider_id,
+        "model":       provider["model"],
+        "temperature": 0,
+        **usage_meta,
     }
 
     return jsonify(result)
 
 
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
+
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
+    port      = int(os.environ.get("PORT", 5001))
+    available = get_available_providers()
     print(f"Talent Match Suite → http://localhost:{port}")
+    print(f"Providers available: {', '.join(p['label'] for p in available) or 'none — check .env'}")
     app.run(host="127.0.0.1", port=port, debug=False)
