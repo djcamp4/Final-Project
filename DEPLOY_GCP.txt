@@ -1,0 +1,178 @@
+TALENT MATCH SUITE — GCP CLOUD RUN DEPLOYMENT GUIDE
+=====================================================
+
+This guide deploys the app to Google Cloud Run. Once deployed you get a
+public HTTPS URL (e.g. https://talent-match-xxxxx.run.app) that anyone
+can open in a browser — no local server needed.
+
+
+PREREQUISITES
+-------------
+1. A Google account
+2. A Google Cloud project with billing enabled
+   - Go to https://console.cloud.google.com
+   - Create a new project (or use an existing one)
+   - Enable billing at https://console.cloud.google.com/billing
+
+3. Install the Google Cloud CLI (gcloud)
+   - Mac:   brew install google-cloud-sdk
+   - Or download from: https://cloud.google.com/sdk/docs/install
+
+4. Your API key(s) — at least one of:
+   - Anthropic:  https://console.anthropic.com
+   - OpenAI:     https://platform.openai.com
+   - Google:     https://aistudio.google.com
+
+
+STEP 1 — LOG IN AND SET YOUR PROJECT
+--------------------------------------
+Open a terminal and run:
+
+    gcloud auth login
+
+Then set your project (replace YOUR_PROJECT_ID with your actual project ID):
+
+    gcloud config set project YOUR_PROJECT_ID
+
+To find your project ID:
+    gcloud projects list
+
+
+STEP 2 — ENABLE REQUIRED GCP SERVICES
+----------------------------------------
+Run these two commands (only needed once per project):
+
+    gcloud services enable cloudbuild.googleapis.com
+    gcloud services enable run.googleapis.com
+
+
+STEP 3 — BUILD THE CONTAINER IMAGE
+-------------------------------------
+From the project root folder (Final-Project/), run:
+
+    gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/talent-match
+
+This uploads your code to GCP and builds the Docker container in the cloud.
+It takes 2–4 minutes the first time.
+
+Replace YOUR_PROJECT_ID with your actual project ID in the command above.
+
+
+STEP 4 — DEPLOY TO CLOUD RUN
+-------------------------------
+Run the following command. Replace the placeholders:
+  - YOUR_PROJECT_ID  → your GCP project ID
+  - YOUR_ANTHROPIC_KEY → your actual Anthropic API key (sk-ant-...)
+
+    gcloud run deploy talent-match \
+      --image gcr.io/YOUR_PROJECT_ID/talent-match \
+      --platform managed \
+      --region us-central1 \
+      --allow-unauthenticated \
+      --set-env-vars ANTHROPIC_API_KEY=YOUR_ANTHROPIC_KEY
+
+When asked "Allow unauthenticated invocations?", type Y.
+
+To add OpenAI or Google keys at the same time, extend --set-env-vars:
+
+    --set-env-vars ANTHROPIC_API_KEY=sk-ant-...,OPENAI_API_KEY=sk-...,GOOGLE_API_KEY=...
+
+
+STEP 5 — GET YOUR URL
+-----------------------
+At the end of the deploy command, GCP prints a Service URL:
+
+    Service URL: https://talent-match-xxxxx.run.app
+
+Open that URL in any browser — the app is live.
+
+
+UPDATING THE APP
+-----------------
+After making code changes, rebuild and redeploy:
+
+    gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/talent-match
+    gcloud run deploy talent-match \
+      --image gcr.io/YOUR_PROJECT_ID/talent-match \
+      --platform managed \
+      --region us-central1
+
+Your URL stays the same after updates.
+
+
+UPDATING AN API KEY
+--------------------
+To change or add an API key without redeploying the whole app:
+
+    gcloud run services update talent-match \
+      --region us-central1 \
+      --set-env-vars ANTHROPIC_API_KEY=NEW_KEY_HERE
+
+
+SECURITY NOTE
+--------------
+Using --allow-unauthenticated means anyone with the URL can use the app.
+This is fine for personal or team use if you share the URL carefully.
+
+If you want to restrict access to your Google account only, redeploy without
+--allow-unauthenticated:
+
+    gcloud run deploy talent-match \
+      --image gcr.io/YOUR_PROJECT_ID/talent-match \
+      --platform managed \
+      --region us-central1 \
+      --no-allow-unauthenticated \
+      --set-env-vars ANTHROPIC_API_KEY=YOUR_KEY
+
+Users will then need to log in with a Google account you have approved.
+
+
+COST
+-----
+Cloud Run pricing (as of 2025):
+  - Free tier: 2 million requests/month, 360,000 vCPU-seconds, 180,000 GB-seconds
+  - For typical team use this means $0/month for Cloud Run itself
+  - You still pay Anthropic/OpenAI/Google for each AI scoring call (~$0.01/resume)
+
+To set a budget alert so you are never surprised:
+  https://console.cloud.google.com/billing → Budgets & Alerts → Create Budget
+
+
+SHUTTING DOWN
+--------------
+To stop the service (stops all billing for Cloud Run):
+
+    gcloud run services delete talent-match --region us-central1
+
+To delete the container image from the registry:
+
+    gcloud container images delete gcr.io/YOUR_PROJECT_ID/talent-match
+
+
+QUICK REFERENCE — ALL COMMANDS
+--------------------------------
+# Login
+gcloud auth login
+gcloud config set project YOUR_PROJECT_ID
+
+# Enable services (once)
+gcloud services enable cloudbuild.googleapis.com run.googleapis.com
+
+# Build
+gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/talent-match
+
+# Deploy
+gcloud run deploy talent-match \
+  --image gcr.io/YOUR_PROJECT_ID/talent-match \
+  --platform managed \
+  --region us-central1 \
+  --allow-unauthenticated \
+  --set-env-vars ANTHROPIC_API_KEY=YOUR_KEY
+
+# Update a key
+gcloud run services update talent-match \
+  --region us-central1 \
+  --set-env-vars ANTHROPIC_API_KEY=NEW_KEY
+
+# Delete
+gcloud run services delete talent-match --region us-central1

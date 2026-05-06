@@ -267,4 +267,6 @@ if __name__ == "__main__":
     available = get_available_providers()
     print(f"Talent Match Suite → http://localhost:{port}")
     print(f"Providers available: {', '.join(p['label'] for p in available) or 'none — check .env'}")
-    app.run(host="127.0.0.1", port=port, debug=False)
+    # Use 0.0.0.0 so the server is reachable inside Docker / Cloud Run.
+    # Locally it still binds to all interfaces but only responds on localhost.
+    app.run(host="0.0.0.0", port=port, debug=False)

@@ -1,0 +1,23 @@
+# Never include API keys or local config
+.env
+.env.*
+
+# Git
+.git
+.gitignore
+
+# macOS
+.DS_Store
+
+# Python cache
+__pycache__
+*.pyc
+*.pyo
+
+# Local resume assets (user data — not part of the app)
+assets/
+
+# Docs (not needed at runtime)
+INSTRUCTIONS.txt
+DEPLOY_GCP.txt
+README.md
