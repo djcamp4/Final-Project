@@ -81,11 +81,11 @@ Return ONLY valid JSON with exactly these keys:
   },
   "confidence": "<low|medium|high>",
   "matched_requirements": {
-    "required_skills": ["<item>", "..."],
-    "experience_and_tenure": ["<item>", "..."],
-    "achievements": ["<item>", "..."],
-    "responsibilities": ["<item>", "..."],
-    "preferred_skills": ["<item>", "..."]
+    "required_skills": ["<concise phrase, 3-7 words>", "..."],
+    "experience_and_tenure": ["<concise phrase, 3-7 words>", "..."],
+    "achievements": ["<concise phrase, 3-7 words>", "..."],
+    "responsibilities": ["<concise phrase, 3-7 words>", "..."],
+    "preferred_skills": ["<concise phrase, 3-7 words>", "..."]
   },
   "gaps": ["<item>", "..."],
   "summary": "<2-3 sentence plain-English rationale>",

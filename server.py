@@ -115,7 +115,7 @@ def score_anthropic(prompt_text, user_msg, model):
     client   = _anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
     response = client.messages.create(
         model=model,
-        max_tokens=2048,
+        max_tokens=8192,
         temperature=0,
         system=[{
             "type": "text",
@@ -241,6 +241,9 @@ def api_score():
     try:
         result = parse_llm_json(raw)
     except json.JSONDecodeError as exc:
+        print("=== RAW MODEL OUTPUT (parse failed) ===")
+        print(raw)
+        print("=== END RAW OUTPUT ===")
         return jsonify({"error": f"Model returned invalid JSON: {exc}", "raw": raw}), 502
 
     result["prompt_sha256"] = prompt_sha
