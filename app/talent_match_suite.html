@@ -107,7 +107,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#dce3ed;min-height:1
 .sbar{height:9px;border-radius:4px;background:linear-gradient(90deg,#0d7a5e,#1dba8e);min-width:3px;transition:width 0.5s}
 .spct{font-size:12px;font-weight:700;color:#0a5a44;min-width:36px}
 .skill-wrap{display:flex;flex-wrap:wrap;gap:2px}
-.skbadge{background:#e8f2ff;color:#1a5090;border-radius:3px;padding:2px 6px;font-size:10px;font-weight:500;white-space:nowrap}
+.skbadge{border-radius:3px;padding:2px 6px;font-size:10px;font-weight:500;white-space:nowrap}
+.dim-skill-row{display:flex;flex-wrap:wrap;gap:3px;align-items:center;margin-top:3px}
 input[type="checkbox"]{accent-color:#0d7a5e;cursor:pointer;flex-shrink:0}
 </style>
 </head>
@@ -584,33 +585,40 @@ async function scoreResume(text,jd,name,hw4Flags){
 }
 
 // ─── Render results ───────────────────────────────────────────────────
+const DIM_META=[
+  {key:'required_skills',       l:'Req',  c:'#1dba8e'},
+  {key:'experience_and_tenure', l:'Exp',  c:'#2a7ac8'},
+  {key:'achievements',          l:'Ach',  c:'#f4a800'},
+  {key:'responsibilities',      l:'Resp', c:'#9a5ae0'},
+  {key:'preferred_skills',      l:'Pref', c:'#3a8ac8'},
+];
+
 function renderResults(){
   const sorted=[...allResults].sort((a,b)=>sortDesc?(b.weighted_score||0)-(a.weighted_score||0):(a.weighted_score||0)-(b.weighted_score||0));
   document.getElementById('resultsBody').innerHTML=sorted.map((r,rank)=>{
     const wscore=Math.max(0,Math.min(5,+(r.weighted_score||0)));
     const barW=Math.round(wscore/5*80);
-    const ac=AV_COLORS[rank%AV_COLORS.length];
     const arr=rank===0?'↑':wscore>=3.75?'↑':wscore<=1.25?'↓':'–';
     const arrC=arr==='↑'?'#0d7a5e':arr==='↓'?'#c41a1a':'#9ab0c8';
     let hw4H='';
     if(r.injPhrases?.length)   hw4H+=`<span class="hw4-flag hw4-inj">⚠ injection detected</span>`;
     if(r.hw4Flags?.includes('hidden_text_detected')) hw4H+=`<span class="hw4-flag hw4-rev">🔶 hidden text stripped</span>`;
     const _d=r.dimensions||{};
-    const dims=[
-      {l:'Req', v:_d.required_skills,       c:'#1dba8e'},
-      {l:'Exp', v:_d.experience_and_tenure, c:'#2a7ac8'},
-      {l:'Ach', v:_d.achievements,          c:'#f4a800'},
-      {l:'Resp',v:_d.responsibilities,      c:'#9a5ae0'},
-      {l:'Pref',v:_d.preferred_skills,      c:'#3a8ac8'},
-    ].map(d=>`<span class="dbadge" style="background:${d.c}18;color:${d.c}">${d.l} ${(+(d.v)||0).toFixed(1)}</span>`).join('');
-    const skills=(r.matched_requirements||[]).slice(0,3).map(s=>`<span class="skbadge">${s}</span>`).join('');
+    const mr=r.matched_requirements||{};
+    const isGrouped=mr&&typeof mr==='object'&&!Array.isArray(mr);
+    const dimRows=DIM_META.map(d=>{
+      const score=(+((_d)[d.key])||0).toFixed(1);
+      const items=isGrouped?(mr[d.key]||[]):(Array.isArray(mr)?[]:[]); // flat array fallback: no items
+      const itemBadges=items.map(s=>`<span class="skbadge" style="background:${d.c}18;color:${d.c}">${s}</span>`).join('');
+      return `<div class="dim-skill-row"><span class="dbadge" style="background:${d.c}18;color:${d.c}">${d.l} ${score}</span>${itemBadges}</div>`;
+    }).join('');
     const strd=starred.has(r.fn);
     return `<tr>
       <td><div class="rank-cell"><button class="star-btn ${strd?'on':'off'}" onclick="toggleStar('${r.fn}',this)">★</button><span style="color:${arrC};font-size:10px;font-weight:800">${arr}</span><span class="rnum">${rank+1}</span></div></td>
       <td>
         <div class="cn" style="margin-bottom:5px">${r.dn}</div>
         ${hw4H?`<div style="margin-bottom:4px">${hw4H}</div>`:''}
-        <div class="dims-row">${dims}</div>
+        ${dimRows}
       </td>
       <td style="white-space:nowrap">
         <div class="sbar-wrap" style="flex-direction:column;align-items:flex-start;gap:4px">
@@ -620,7 +628,6 @@ function renderResults(){
       </td>
       <td>
         <div class="cr">${r.summary||''}</div>
-        <div class="skill-wrap" style="margin-top:6px">${skills}</div>
       </td>
     </tr>`;
   }).join('');

@@ -10,7 +10,7 @@ dimensions.
 
 1. Read the resume and job description carefully.
 2. Score the candidate on each of the five dimensions below (integer 1–5 each).
-3. Identify matched requirements and gaps.
+3. Identify matched requirements (grouped by dimension) and gaps.
 4. Return a structured JSON object — nothing else.
 
 The calling script computes the weighted composite score from your dimension
@@ -80,7 +80,13 @@ Return ONLY valid JSON with exactly these keys:
     "preferred_skills": <integer 1-5>
   },
   "confidence": "<low|medium|high>",
-  "matched_requirements": ["<item>", "..."],
+  "matched_requirements": {
+    "required_skills": ["<item>", "..."],
+    "experience_and_tenure": ["<item>", "..."],
+    "achievements": ["<item>", "..."],
+    "responsibilities": ["<item>", "..."],
+    "preferred_skills": ["<item>", "..."]
+  },
   "gaps": ["<item>", "..."],
   "summary": "<2-3 sentence plain-English rationale>",
   "prompt_sha256": ""
