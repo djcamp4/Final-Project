@@ -115,7 +115,7 @@ def score_anthropic(prompt_text, user_msg, model):
     client   = _anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
     response = client.messages.create(
         model=model,
-        max_tokens=1024,
+        max_tokens=2048,
         temperature=0,
         system=[{
             "type": "text",
