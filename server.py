@@ -205,7 +205,10 @@ def api_score():
     data        = request.get_json(force=True) or {}
     resume_text = (data.get("resume_text") or "").strip()
     jd_text     = (data.get("jd_text") or "").strip()
-    provider_id = (data.get("provider") or "anthropic").lower()
+    # Provider is set in .env (AI_PROVIDER=anthropic/openai/google)
+    # Falls back to the first provider that has a key configured.
+    default = os.environ.get("AI_PROVIDER", "anthropic").lower()
+    provider_id = (data.get("provider") or default).lower()
 
     if not resume_text or not jd_text:
         return jsonify({"error": "resume_text and jd_text are required"}), 400
