@@ -30,9 +30,9 @@ Open a terminal and run:
 
     gcloud auth login
 
-Then set your project (replace YOUR_PROJECT_ID with your actual project ID):
+Then set your project:
 
-    gcloud config set project YOUR_PROJECT_ID
+    gcloud config set project talent-match-suite
 
 To find your project ID:
     gcloud projects list
@@ -50,22 +50,18 @@ STEP 3 — BUILD THE CONTAINER IMAGE
 -------------------------------------
 From the project root folder (Final-Project/), run:
 
-    gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/talent-match
+    gcloud builds submit --tag gcr.io/talent-match-suite/talent-match
 
 This uploads your code to GCP and builds the Docker container in the cloud.
 It takes 2–4 minutes the first time.
 
-Replace YOUR_PROJECT_ID with your actual project ID in the command above.
-
 
 STEP 4 — DEPLOY TO CLOUD RUN
 -------------------------------
-Run the following command. Replace the placeholders:
-  - YOUR_PROJECT_ID  → your GCP project ID
-  - YOUR_ANTHROPIC_KEY → your actual Anthropic API key (sk-ant-...)
+Run the following command. Replace YOUR_ANTHROPIC_KEY with your actual key:
 
     gcloud run deploy talent-match \
-      --image gcr.io/YOUR_PROJECT_ID/talent-match \
+      --image gcr.io/talent-match-suite/talent-match \
       --platform managed \
       --region us-central1 \
       --allow-unauthenticated \
@@ -91,9 +87,9 @@ UPDATING THE APP
 -----------------
 After making code changes, rebuild and redeploy:
 
-    gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/talent-match
+    gcloud builds submit --tag gcr.io/talent-match-suite/talent-match
     gcloud run deploy talent-match \
-      --image gcr.io/YOUR_PROJECT_ID/talent-match \
+      --image gcr.io/talent-match-suite/talent-match \
       --platform managed \
       --region us-central1
 
@@ -118,7 +114,7 @@ If you want to restrict access to your Google account only, redeploy without
 --allow-unauthenticated:
 
     gcloud run deploy talent-match \
-      --image gcr.io/YOUR_PROJECT_ID/talent-match \
+      --image gcr.io/talent-match-suite/talent-match \
       --platform managed \
       --region us-central1 \
       --no-allow-unauthenticated \
@@ -146,24 +142,24 @@ To stop the service (stops all billing for Cloud Run):
 
 To delete the container image from the registry:
 
-    gcloud container images delete gcr.io/YOUR_PROJECT_ID/talent-match
+    gcloud container images delete gcr.io/talent-match-suite/talent-match
 
 
 QUICK REFERENCE — ALL COMMANDS
 --------------------------------
 # Login
 gcloud auth login
-gcloud config set project YOUR_PROJECT_ID
+gcloud config set project talent-match-suite
 
 # Enable services (once)
 gcloud services enable cloudbuild.googleapis.com run.googleapis.com
 
 # Build
-gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/talent-match
+gcloud builds submit --tag gcr.io/talent-match-suite/talent-match
 
 # Deploy
 gcloud run deploy talent-match \
-  --image gcr.io/YOUR_PROJECT_ID/talent-match \
+  --image gcr.io/talent-match-suite/talent-match \
   --platform managed \
   --region us-central1 \
   --allow-unauthenticated \
