@@ -604,14 +604,17 @@ function renderResults(){
     if(r.injPhrases?.length)   hw4H+=`<span class="hw4-flag hw4-inj">⚠ injection detected</span>`;
     if(r.hw4Flags?.includes('hidden_text_detected')) hw4H+=`<span class="hw4-flag hw4-rev">🔶 hidden text stripped</span>`;
     const _d=r.dimensions||{};
-    const mr=r.matched_requirements||{};
+    const mr=r.matched_requirements;
     const isGrouped=mr&&typeof mr==='object'&&!Array.isArray(mr);
+    const isFlatArray=Array.isArray(mr)&&mr.length>0;
     const dimRows=DIM_META.map(d=>{
       const score=(+((_d)[d.key])||0).toFixed(1);
-      const items=isGrouped?(mr[d.key]||[]):(Array.isArray(mr)?[]:[]); // flat array fallback: no items
+      const items=isGrouped?(mr[d.key]||[]):[];
       const itemBadges=items.map(s=>`<span class="skbadge" style="background:${d.c}18;color:${d.c}">${s}</span>`).join('');
       return `<div class="dim-skill-row"><span class="dbadge" style="background:${d.c}18;color:${d.c}">${d.l} ${score}</span>${itemBadges}</div>`;
     }).join('');
+    // fallback: if model returned flat array, show skills in summary column
+    const flatSkills=isFlatArray?`<div class="skill-wrap" style="margin-top:6px">${mr.map(s=>`<span class="skbadge" style="background:#e8f2ff;color:#1a5090">${s}</span>`).join('')}</div>`:'';
     const strd=starred.has(r.fn);
     return `<tr>
       <td><div class="rank-cell"><button class="star-btn ${strd?'on':'off'}" onclick="toggleStar('${r.fn}',this)">★</button><span style="color:${arrC};font-size:10px;font-weight:800">${arr}</span><span class="rnum">${rank+1}</span></div></td>
@@ -628,6 +631,7 @@ function renderResults(){
       </td>
       <td>
         <div class="cr">${r.summary||''}</div>
+        ${flatSkills}
       </td>
     </tr>`;
   }).join('');
