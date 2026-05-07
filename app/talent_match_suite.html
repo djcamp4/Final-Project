@@ -608,22 +608,19 @@ function renderResults(){
     const isGrouped=mr&&typeof mr==='object'&&!Array.isArray(mr);
     const isFlatArray=Array.isArray(mr)&&mr.length>0;
 
-    // Candidate column: dim score badges only
-    const dimBadges=DIM_META.map(d=>{
-      const score=(+((_d)[d.key])||0).toFixed(1);
-      return `<span class="dbadge" style="background:${d.c}18;color:${d.c}">${d.l} ${score}</span>`;
-    }).join('');
-
-    // Summary column: two-column grid — badge left, items right, aligned per row
-    let dimGrid='';
+    // Dimension table rows for summary column
+    let dimTable='';
     if(isGrouped){
-      const rows=DIM_META.map(d=>{
+      const trows=DIM_META.map(d=>{
         const score=(+((_d)[d.key])||0).toFixed(1);
-        const items=mr[d.key]||[];
-        const itemBadges=items.map(s=>`<span class="skbadge" style="background:${d.c}18;color:${d.c}">${s}</span>`).join('');
-        return `<span class="dbadge" style="background:${d.c}18;color:${d.c};white-space:nowrap">${d.l} ${score}</span><div class="skill-wrap">${itemBadges}</div>`;
+        const items=(mr[d.key]||[]).map(s=>`<span class="skbadge" style="background:${d.c}18;color:${d.c}">${s}</span>`).join('');
+        return `<tr style="background:${d.c}0d">
+          <td style="white-space:nowrap;padding:4px 10px 4px 8px;font-size:11px;font-weight:700;color:${d.c};border-left:3px solid ${d.c};width:1%">${d.l}</td>
+          <td style="white-space:nowrap;padding:4px 10px 4px 0;font-size:12px;font-weight:800;color:${d.c};width:1%">${score}/5</td>
+          <td style="padding:4px 8px 4px 0"><div class="skill-wrap">${items}</div></td>
+        </tr>`;
       }).join('');
-      dimGrid=`<div style="display:grid;grid-template-columns:auto 1fr;gap:5px 10px;margin-top:8px;align-items:start">${rows}</div>`;
+      dimTable=`<table style="width:100%;border-collapse:collapse;margin-top:9px;border-radius:6px;overflow:hidden">${trows}</table>`;
     }
     const flatSkills=isFlatArray?`<div class="skill-wrap" style="margin-top:6px">${mr.map(s=>`<span class="skbadge" style="background:#e8f2ff;color:#1a5090">${s}</span>`).join('')}</div>`:'';
 
@@ -631,9 +628,8 @@ function renderResults(){
     return `<tr>
       <td><div class="rank-cell"><button class="star-btn ${strd?'on':'off'}" onclick="toggleStar('${r.fn}',this)">★</button><span style="color:${arrC};font-size:10px;font-weight:800">${arr}</span><span class="rnum">${rank+1}</span></div></td>
       <td>
-        <div class="cn" style="margin-bottom:5px">${r.dn}</div>
-        ${hw4H?`<div style="margin-bottom:4px">${hw4H}</div>`:''}
-        <div class="dims-row">${dimBadges}</div>
+        <div class="cn">${r.dn}</div>
+        ${hw4H?`<div style="margin-top:4px">${hw4H}</div>`:''}
       </td>
       <td style="white-space:nowrap">
         <div class="sbar-wrap" style="flex-direction:column;align-items:flex-start;gap:4px">
@@ -643,7 +639,7 @@ function renderResults(){
       </td>
       <td>
         <div class="cr">${r.summary||''}</div>
-        ${dimGrid}
+        ${dimTable}
         ${flatSkills}
       </td>
     </tr>`;
