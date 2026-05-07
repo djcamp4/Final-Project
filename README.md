@@ -1,7 +1,7 @@
 # Applicant Scoring with Agentic AI
 
 A two-stage pipeline that extracts resume text and scores it against a job
-description using an AI API. Supports Anthropic (Claude), OpenAI (GPT-4o),
+description. Supports Anthropic (Claude), OpenAI (GPT-4o),
 and Google Gemini.
 
 ---

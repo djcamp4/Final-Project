@@ -2,7 +2,7 @@
 
 This is a two-stage applicant scoring pipeline built in Claude.ai.
 
-## Stage 1 — resume-extractor (already built)
+## Stage 1 — resume-extractor 
 - Source: https://github.com/djcamp4/hw4-DanCampbell
 - Copy the .agents/skills/resume-extractor folder from that repo into this one
 - Do not modify the hw4-DanCampbell repo
