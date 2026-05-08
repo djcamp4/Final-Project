@@ -594,7 +594,6 @@ const DIM_META=[
 ];
 
 function renderResults(){
-  console.log('renderResults v3 — colspan layout');
   const sorted=[...allResults].sort((a,b)=>sortDesc?(b.weighted_score||0)-(a.weighted_score||0):(a.weighted_score||0)-(b.weighted_score||0));
   document.getElementById('resultsBody').innerHTML=sorted.map((r,rank)=>{
     const wscore=Math.max(0,Math.min(5,+(r.weighted_score||0)));

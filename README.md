@@ -4,6 +4,12 @@ A two-stage pipeline that extracts resume text and scores it against a job
 description. Supports Anthropic (Claude), OpenAI (GPT-4o),
 and Google Gemini.
 
+## Live app
+
+**https://talent-match-781675988453.us-central1.run.app**
+
+No setup required — open the URL in any browser and start scoring resumes.
+
 ---
 
 ## Pipeline overview
@@ -98,14 +104,25 @@ The weighted average is the final score (shown as X.X / 5).
 {
   "score": "1-5",
   "weighted_score": 3.75,
+  "match_percent": 75,
   "confidence": "low|medium|high",
-  "matched_requirements": ["..."],
+  "dimensions": {
+    "required_skills": 4,
+    "experience_and_tenure": 4,
+    "achievements": 3,
+    "responsibilities": 4,
+    "preferred_skills": 3
+  },
+  "matched_requirements": {
+    "required_skills": ["concise phrase", "..."],
+    "experience_and_tenure": ["concise phrase", "..."],
+    "achievements": ["concise phrase", "..."],
+    "responsibilities": ["concise phrase", "..."],
+    "preferred_skills": ["concise phrase", "..."]
+  },
   "gaps": ["..."],
   "summary": "Plain-English rationale",
   "prompt_sha256": "SHA-256 of prompts/score.md",
-  "candidate": "Name",
-  "resume_file": "clean_resume_*.txt",
-  "jd_sha256": "SHA-256 of job description",
   "_meta": {
     "provider": "anthropic|openai|google",
     "model": "claude-sonnet-4-6",
