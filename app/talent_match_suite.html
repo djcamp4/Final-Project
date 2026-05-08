@@ -636,8 +636,8 @@ function renderResults(){
           <span class="spct">${Number.isInteger(wscore)?wscore:wscore.toFixed(1)}/5</span>
         </div>
       </td>
-      <td>
-        <div class="cr">${r.summary||''}</div>
+      <td style="padding-left:0">
+        <div class="cr" style="padding-left:8px">${r.summary||''}</div>
         ${dimTable}
         ${flatSkills}
       </td>
