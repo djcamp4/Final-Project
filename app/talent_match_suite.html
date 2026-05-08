@@ -624,24 +624,24 @@ function renderResults(){
     const flatSkills=isFlatArray?`<div class="skill-wrap" style="margin-top:6px">${mr.map(s=>`<span class="skbadge" style="background:#e8f2ff;color:#1a5090">${s}</span>`).join('')}</div>`:'';
 
     const strd=starred.has(r.fn);
+    const hasDims=dimTable||flatSkills;
     return `<tr>
-      <td><div class="rank-cell"><button class="star-btn ${strd?'on':'off'}" onclick="toggleStar('${r.fn}',this)">★</button><span style="color:${arrC};font-size:10px;font-weight:800">${arr}</span><span class="rnum">${rank+1}</span></div></td>
-      <td>
+      <td style="border-bottom:${hasDims?'none':''}"><div class="rank-cell"><button class="star-btn ${strd?'on':'off'}" onclick="toggleStar('${r.fn}',this)">★</button><span style="color:${arrC};font-size:10px;font-weight:800">${arr}</span><span class="rnum">${rank+1}</span></div></td>
+      <td style="border-bottom:${hasDims?'none':''}">
         <div class="cn">${r.dn}</div>
         ${hw4H?`<div style="margin-top:4px">${hw4H}</div>`:''}
       </td>
-      <td style="white-space:nowrap">
+      <td style="white-space:nowrap;border-bottom:${hasDims?'none':''}">
         <div class="sbar-wrap" style="flex-direction:column;align-items:flex-start;gap:4px">
           <div class="sbar" style="width:${barW}px"></div>
           <span class="spct">${Number.isInteger(wscore)?wscore:wscore.toFixed(1)}/5</span>
         </div>
       </td>
-      <td style="padding-left:0">
-        <div class="cr" style="padding-left:8px">${r.summary||''}</div>
-        ${dimTable}
-        ${flatSkills}
+      <td style="border-bottom:${hasDims?'none':''}">
+        <div class="cr">${r.summary||''}</div>
       </td>
-    </tr>`;
+    </tr>
+    ${hasDims?`<tr><td colspan="4" style="padding:0 8px 10px 0">${dimTable}${flatSkills}</td></tr>`:''}`;
   }).join('');
 }
 
