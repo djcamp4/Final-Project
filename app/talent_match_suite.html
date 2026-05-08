@@ -202,7 +202,10 @@ input[type="checkbox"]{accent-color:#0d7a5e;cursor:pointer;flex-shrink:0}
   <div class="panel">
     <div class="results-hdr">
       <div class="panel-title">View Ranked Results</div>
-      <button class="sort-btn" id="sortBtn" onclick="toggleSort()">Sort all ▾</button>
+      <div style="display:flex;gap:6px">
+        <button class="sort-btn" id="sortBtn" onclick="toggleSort()">Sort all ▾</button>
+        <button class="sort-btn" onclick="clearResults()" style="color:#c41a1a;border-color:#f0c0c0">Clear</button>
+      </div>
     </div>
     <div id="resultsEmpty" class="empty-state">
       <div class="es-icon">📊</div>
@@ -555,10 +558,8 @@ async function startRun(){
   const selected=files.map((u,i)=>({u,i})).filter(({i})=>document.getElementById(`cb_${i}`)?.checked);
   if(!selected.length){alert('Select at least one candidate.');return;}
 
-  allResults=[];
   document.getElementById('resultsScroll').style.display='block';
   document.getElementById('resultsEmpty').style.display='none';
-  document.getElementById('resultsBody').innerHTML='';
 
   const btn=document.getElementById('startBtn'), prog=document.getElementById('progressWrap');
   btn.disabled=true; btn.textContent='Running…'; prog.style.display='block';
@@ -570,14 +571,17 @@ async function startRun(){
     try {
       const r=await scoreResume(u.hw4?.visibleText||'',jd,u.dn,u.hw4?.flags||[]);
       r.dn=u.dn; r.fn=u.name; r.hw4Flags=u.hw4?.flags||[]; r.injPhrases=u.hw4?.injectionPhrases||[];
-      allResults.push(r);
+      const idx=allResults.findIndex(x=>x.fn===r.fn);
+      if(idx>=0) allResults[idx]=r; else allResults.push(r);
     } catch(e) {
-      allResults.push({dn:u.dn,fn:u.name,match_percent:0,score:0,weighted_score:0,dimensions:{},matched_requirements:[],gaps:[],summary:'Error: '+e.message,hw4Flags:u.hw4?.flags||[],injPhrases:u.hw4?.injectionPhrases||[]});
+      const errR={dn:u.dn,fn:u.name,match_percent:0,score:0,weighted_score:0,dimensions:{},matched_requirements:[],gaps:[],summary:'Error: '+e.message,hw4Flags:u.hw4?.flags||[],injPhrases:u.hw4?.injectionPhrases||[]};
+      const idx=allResults.findIndex(x=>x.fn===errR.fn);
+      if(idx>=0) allResults[idx]=errR; else allResults.push(errR);
     }
     renderResults();
   }
 
-  prog.innerHTML=`<div class="prog-wrap" style="background:#f0faf6"><span style="font-weight:700;color:#0d7a5e;font-size:12px">✓ Complete — ${allResults.length} candidate${allResults.length!==1?'s':''} scored</span></div>`;
+  prog.innerHTML=`<div class="prog-wrap" style="background:#f0faf6"><span style="font-weight:700;color:#0d7a5e;font-size:12px">✓ Complete — ${allResults.length} candidate${allResults.length!==1?'s':''} scored this session</span></div>`;
   btn.disabled=false; btn.textContent='Start Matching Run';
   renderInsights();
 }
@@ -655,6 +659,15 @@ function renderResults(){
 }
 
 function toggleStar(fn,btn){if(starred.has(fn)){starred.delete(fn);btn.className='star-btn off';}else{starred.add(fn);btn.className='star-btn on';}}
+function clearResults(){
+  if(!allResults.length) return;
+  if(!confirm(`Clear all ${allResults.length} scored candidate${allResults.length!==1?'s':''}?`)) return;
+  allResults=[]; starred=new Set();
+  document.getElementById('resultsBody').innerHTML='';
+  document.getElementById('resultsScroll').style.display='none';
+  document.getElementById('resultsEmpty').style.display='flex';
+  document.getElementById('insightsSection').style.display='none';
+}
 function toggleSort(){sortDesc=!sortDesc;document.getElementById('sortBtn').textContent=sortDesc?'Sort all ▾':'Sort all ▴';if(allResults.length)renderResults();}
 
 // ─── Talent Pool Insights ─────────────────────────────────────────────
@@ -712,7 +725,7 @@ function renderInsights(){
 
   document.getElementById('insightsBody').innerHTML=`
     <div style="font-size:11px;color:#5a7090;margin-bottom:12px">
-      Based on <strong>${ins.n}</strong> candidate${ins.n!==1?'s':''} scored in this session. Skills ranked by how often they appear across resumes.
+      Based on <strong>${ins.n}</strong> candidate${ins.n!==1?'s':''} scored this session — adds up across runs until you hit Clear. Skills ranked by frequency across all resumes.
     </div>
     ${dimHTML}
     ${gapsHTML}
