@@ -215,6 +215,14 @@ input[type="checkbox"]{accent-color:#0d7a5e;cursor:pointer;flex-shrink:0}
         </tr></thead>
         <tbody id="resultsBody"></tbody>
       </table>
+      <!-- Talent Pool Insights -->
+      <div id="insightsSection" style="display:none;border-top:2px solid #e4edf8;margin-top:8px;padding:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div style="font-size:14px;font-weight:700;color:#0c1b35">🔍 Talent Pool Insights</div>
+          <button id="insightsToggleBtn" onclick="toggleInsights()" style="border:1px solid #c4d4e6;background:#fff;border-radius:6px;padding:3px 10px;font-size:11.5px;cursor:pointer;color:#4a6080">Hide</button>
+        </div>
+        <div id="insightsBody"></div>
+      </div>
     </div>
   </div>
 
@@ -571,6 +579,7 @@ async function startRun(){
 
   prog.innerHTML=`<div class="prog-wrap" style="background:#f0faf6"><span style="font-weight:700;color:#0d7a5e;font-size:12px">✓ Complete — ${allResults.length} candidate${allResults.length!==1?'s':''} scored</span></div>`;
   btn.disabled=false; btn.textContent='Start Matching Run';
+  renderInsights();
 }
 
 async function scoreResume(text,jd,name,hw4Flags){
@@ -647,6 +656,78 @@ function renderResults(){
 
 function toggleStar(fn,btn){if(starred.has(fn)){starred.delete(fn);btn.className='star-btn off';}else{starred.add(fn);btn.className='star-btn on';}}
 function toggleSort(){sortDesc=!sortDesc;document.getElementById('sortBtn').textContent=sortDesc?'Sort all ▾':'Sort all ▴';if(allResults.length)renderResults();}
+
+// ─── Talent Pool Insights ─────────────────────────────────────────────
+let insightsVisible=true;
+
+function computeInsights(){
+  const n=allResults.length;
+  if(!n) return null;
+  const dimSkills={};
+  const gapFreq={};
+  for(const r of allResults){
+    const mr=r.matched_requirements;
+    const isGrouped=mr&&typeof mr==='object'&&!Array.isArray(mr);
+    if(isGrouped){
+      for(const d of DIM_META){
+        if(!dimSkills[d.key]) dimSkills[d.key]={};
+        for(const skill of (mr[d.key]||[])){
+          const key=skill.toLowerCase().trim();
+          if(!dimSkills[d.key][key]) dimSkills[d.key][key]={count:0,display:skill};
+          dimSkills[d.key][key].count++;
+        }
+      }
+    }
+    for(const gap of (r.gaps||[])){
+      const key=gap.toLowerCase().trim();
+      if(!gapFreq[key]) gapFreq[key]={count:0,display:gap};
+      gapFreq[key].count++;
+    }
+  }
+  return{n,dimSkills,gapFreq};
+}
+
+function renderInsights(){
+  const ins=computeInsights();
+  const sec=document.getElementById('insightsSection');
+  if(!ins){sec.style.display='none';return;}
+  sec.style.display='block';
+
+  const dimHTML=DIM_META.map(d=>{
+    const skills=Object.values(ins.dimSkills[d.key]||{})
+      .sort((a,b)=>b.count-a.count).slice(0,12);
+    if(!skills.length) return '';
+    const chips=skills.map(s=>`<span class="skbadge" style="background:${d.c}18;color:${d.c}">${s.display}${s.count>1?` <strong>×${s.count}</strong>`:''}</span>`).join('');
+    return `<div style="margin-bottom:10px">
+      <div style="font-size:10.5px;font-weight:700;color:${d.c};margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px">${d.l}</div>
+      <div class="skill-wrap">${chips}</div>
+    </div>`;
+  }).join('');
+
+  const topGaps=Object.values(ins.gapFreq).sort((a,b)=>b.count-a.count).slice(0,10);
+  const gapsHTML=topGaps.length?`<div style="border-top:1px solid #eaf0f8;padding-top:10px;margin-top:4px">
+    <div style="font-size:10.5px;font-weight:700;color:#8a4a00;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px">Common Gaps</div>
+    <div class="skill-wrap">${topGaps.map(g=>`<span class="skbadge" style="background:#fee2e230;color:#8a2a00">${g.display}${g.count>1?` <strong>×${g.count}</strong>`:''}</span>`).join('')}</div>
+  </div>`:'';
+
+  document.getElementById('insightsBody').innerHTML=`
+    <div style="font-size:11px;color:#5a7090;margin-bottom:12px">
+      Based on <strong>${ins.n}</strong> candidate${ins.n!==1?'s':''} scored in this session. Skills ranked by how often they appear across resumes.
+    </div>
+    ${dimHTML}
+    ${gapsHTML}
+    <div style="margin-top:12px;padding:9px 12px;background:#f0f6ff;border-radius:6px;font-size:11.5px;color:#1a3a70;border-left:3px solid #2a7ac8;line-height:1.6">
+      💡 <strong>Recruiter tip:</strong> These are the skills your candidate pool actually has. If you see strong skills here that aren't in the job description, consider whether they're worth adding — or whether the JD emphasis needs adjusting to attract the right talent.
+    </div>`;
+}
+
+function toggleInsights(){
+  const body=document.getElementById('insightsBody');
+  const btn=document.getElementById('insightsToggleBtn');
+  insightsVisible=!insightsVisible;
+  body.style.display=insightsVisible?'':'none';
+  btn.textContent=insightsVisible?'Hide':'Show';
+}
 </script>
 </body>
 </html>
