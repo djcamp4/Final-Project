@@ -55,7 +55,7 @@ A two-stage agentic pipeline that extracts resume text and scores it against a j
 **Consistency check:** A dedicated script (`consistency_check.py`) re-scores the same resume/JD pair multiple times and flags any dimension where scores vary by more than 1 point across runs. Temperature is set to 0 for all scoring calls to minimize variance.
 
 **What was found:**
-- The pipeline scored and ranked 10 resumes in approximately 30 seconds — compared to the 30–50 minutes a recruiter would spend on the same set. That's a roughly 60–100x reduction in screening time for the initial pass.
+- **Speed:** The pipeline scored and ranked 10 resumes in approximately 1.5 minutes — compared to the 30–50 minutes a recruiter would spend on the same set. That's a roughly 20–30x reduction in screening time for the initial pass.
 - All three providers produced scores within acceptable calibration ranges for strong and weak candidates.
 - Mid-tier candidates (scores 2.5–3.5) showed the most inter-provider variance — expected given genuine ambiguity in those profiles.
 - Claude produced the most detailed `gaps` and `summary` fields; Gemini was fastest; GPT-4o was most verbose in reasoning.
