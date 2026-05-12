@@ -1,0 +1,67 @@
+Senior Backend Engineer
+Location: Boston, MA (Hybrid — 3 days onsite)
+Department: Engineering
+Reports to: VP of Engineering
+
+---
+
+ABOUT THE ROLE
+
+We are looking for a Senior Backend Engineer to join our core platform team. You will design,
+build, and scale the backend systems that power our SaaS product, which serves thousands of
+enterprise customers and processes hundreds of millions of API requests per month. You will
+work closely with product, frontend engineering, and infrastructure teams to deliver reliable,
+high-performance features and lead technical improvements across the codebase.
+
+---
+
+REQUIRED SKILLS AND QUALIFICATIONS
+
+- 5+ years of professional backend software engineering experience
+- Strong proficiency in Python — used daily in a production environment
+- Deep experience with Django or Django REST Framework
+- Expert-level PostgreSQL skills including query optimization, indexing, and schema design
+- Experience designing and maintaining RESTful APIs at scale
+- Proven ability to debug and improve performance in high-traffic production systems
+- Experience with asynchronous task processing (Celery, Redis, or equivalent)
+- Familiarity with cloud infrastructure, preferably AWS (EC2, RDS, S3)
+- Comfortable writing automated tests and working in a CI/CD environment
+- Experience mentoring junior engineers or leading small technical teams
+
+---
+
+PREFERRED QUALIFICATIONS
+
+- Experience with Docker and container orchestration (Kubernetes a plus)
+- Familiarity with FastAPI or other modern Python web frameworks
+- AWS certification (Developer Associate or higher)
+- Experience migrating or modernizing legacy systems
+- Contributions to open source Python projects
+
+---
+
+RESPONSIBILITIES
+
+- Design, build, and maintain scalable backend services and APIs consumed by web and
+  mobile clients
+- Own the reliability and performance of core platform services — set uptime targets,
+  monitor systems, and lead incident response
+- Identify and resolve database performance bottlenecks through query optimization,
+  indexing strategies, and caching
+- Collaborate with frontend engineers and product managers to design APIs and translate
+  product requirements into technical solutions
+- Write clean, well-tested, well-documented code and participate actively in code reviews
+- Mentor junior and mid-level engineers through code reviews, pair programming, and
+  design discussions
+- Contribute to architectural decisions and help evolve the platform from its current
+  state toward a more scalable, maintainable design
+
+---
+
+ABOUT US
+
+We are a B2B SaaS company building data infrastructure tools for enterprise clients. Our
+engineering team is small, collaborative, and moves fast. We value engineers who take
+ownership, communicate clearly, and care about the quality of what they ship.
+
+Compensation: $155,000 – $185,000 base + equity + benefits
