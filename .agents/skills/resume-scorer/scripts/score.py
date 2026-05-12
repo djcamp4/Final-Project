@@ -58,7 +58,6 @@ SKILLS_DIR = Path(__file__).resolve().parents[1]
 PROMPT_PATH = SKILLS_DIR / "prompts" / "score.md"
 DEFAULT_MODEL = "claude-sonnet-4-6"
 
-# Weights defined in CONTEXT.md — do not change without updating prompts/score.md
 DIMENSION_WEIGHTS = {
     "required_skills":      0.25,
     "experience_and_tenure": 0.25,
