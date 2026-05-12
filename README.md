@@ -36,6 +36,7 @@ A two-stage agentic pipeline that extracts resume text and scores it against a j
 - **Prompt integrity:** Every score output includes a `prompt_sha256` field — a SHA-256 hash of the scoring prompt at time of run. This makes prompt drift detectable: if the prompt changes between runs, the hash changes, and scores are not directly comparable.
 - **Compliance guardrails:** The model is explicitly instructed never to score on protected characteristics (age, gender, race, nationality, disability, religion, employment gaps, school prestige, or address). Scores are advisory only — the pipeline never makes hire/no-hire recommendations. Any candidate scoring 2 or below requires human review before a rejection decision is communicated.
 - **Structured JSON output:** Every score is a structured JSON object with dimension breakdowns, matched requirements, identified gaps, a plain-English summary, and model metadata.
+- **Talent Pool Insights:** As resumes are scored, the app aggregates matched skills and gaps across the entire candidate pool and surfaces a frequency distribution by dimension. This answers a question recruiters rarely think to ask: *what skills does this applicant pool actually have?* If strong skills keep appearing across candidates but aren't emphasized in the job description, the tool flags them as potential additions — turning the scoring session into feedback on the JD itself, not just the candidates.
 
 ---
 
