@@ -43,7 +43,7 @@ A two-stage agentic pipeline that extracts resume text and scores it against a j
 
 ## Evaluation and Results
 
-**Baseline:** To establish a real-world baseline, five recruiters at the same company were each asked how long it takes them to review a single resume. All five gave the same answer: approximately 3 to 5 minutes per resume. That consistency across independent respondents makes it a reliable benchmark. For a hiring manager reviewing 50 applicants, that's 2.5 to 4+ hours of screening time — before any structured comparison, ranking, or documentation.
+**Baseline:** To establish a real-world baseline, five recruiters at the same company were each asked how long it takes them to review a single resume. All five gave an answer between 3 to 5 minutes per resume. For a hiring manager reviewing 50 applicants, that's 2.5 to 4+ hours of screening time — before any structured comparison, ranking, or documentation.
 
 **Test approach:** Testing covered four distinct input categories to validate both scoring quality and system robustness:
 
