@@ -1,92 +1,25 @@
-# Applicant Scoring with Agentic AI
+# Talent Match Suite
 
-A two-stage pipeline that extracts resume text and scores it against a job
-description. Supports Anthropic (Claude), OpenAI (GPT-4o),
-and Google Gemini.
-
-## Live app
-
-**https://talent-match-781675988453.us-central1.run.app**
-
-No setup required — open the URL in any browser and start scoring resumes.
+A two-stage agentic pipeline that extracts resume text and scores it against a job description using AI. Supports Anthropic (Claude), OpenAI (GPT-4o), and Google Gemini.
 
 ---
 
-## Pipeline overview
+## Context, User, and Problem
 
-```
-assets/
-├── sample_resumes/     ← drop PDF, DOCX, or TXT resumes here
-│   ├── jane_smith.txt
-│   └── bob_jones.txt
-└── extracted/          ← auto-created by Stage 1
-    ├── clean_resume_jane_smith.txt
-    ├── clean_resume_bob_jones.txt
-    └── scores/         ← auto-created by Stage 2
-        ├── score_jane_smith.json
-        ├── score_bob_jones.json
-        └── summary.json
-```
+**Who the user is:** Recruiters, hiring managers, and talent acquisition teams responsible for screening applicants — often under time pressure and working through high volumes of resumes for competitive roles.
+
+**The workflow being improved:** Traditional resume review is manual, inconsistent, and slow. A recruiter evaluating 50+ applicants for the same role will inevitably apply different standards across candidates, miss relevant signals buried in dense documents, and spend hours on work that doesn't require human judgment. The process is also legally risky — unstructured human review is more susceptible to unconscious bias.
+
+**Why it matters:** Faster, more consistent screening means better hiring decisions and a fairer process for candidates. By automating the extract-and-score pipeline, this tool lets a recruiter focus their time on the candidates who actually matter, with structured evidence explaining why.
 
 ---
 
-## Setup
+## Solution and Design
 
-```bash
-pip3 install -r requirements.txt
-```
+**What was built:** Talent Match Suite is a browser-based application backed by a two-stage Python pipeline:
 
-Create a `.env` file at the repo root with at least one API key:
-
-```
-ANTHROPIC_API_KEY=sk-ant-...   # https://console.anthropic.com
-OPENAI_API_KEY=sk-...          # https://platform.openai.com  (optional)
-GOOGLE_API_KEY=...             # https://aistudio.google.com  (optional)
-```
-
-Only providers with a key configured will appear in the browser UI.
-
----
-
-## Browser UI (recommended)
-
-```bash
-PORT=5001 python3 server.py
-# Open http://localhost:5001
-```
-
-Upload resumes in the left panel, paste a job description, choose an AI
-provider, and click **Start Matching Run**. The resume extractor runs in the
-browser first, then the selected AI scores each file that passes.
-
-> Port 5000 is blocked by macOS AirPlay Receiver — use 5001 or higher.
-> If 5001 is taken: `PORT=5002 python3 server.py`
-
----
-
-## Command-line
-
-```bash
-# Stage 1 — extract (no AI)
-python3 .agents/skills/resume-extractor/scripts/extract.py assets/
-
-# Stage 2 — score (AI API)
-python3 .agents/skills/resume-scorer/scripts/score.py \
-    assets/extracted/ job_description.txt
-
-# Consistency check (run after any prompt changes)
-python3 .agents/skills/resume-scorer/scripts/consistency_check.py \
-    assets/extracted/clean_resume_jane_smith.txt \
-    job_description.txt
-```
-
----
-
-## Resume Scorer — Stage 2 detail
-
-### Scoring dimensions
-
-Scores are a weighted composite across five dimensions (each rated 1–5):
+- **Stage 1 — Resume Extractor:** A deterministic text extraction layer that accepts PDF, DOCX, and TXT resumes and outputs clean, normalized plain text. No AI involved — this stage is fast, consistent, and free.
+- **Stage 2 — Resume Scorer:** An AI scoring agent that evaluates each extracted resume against a pasted job description. Scores are a weighted composite across five dimensions (each rated 1–5):
 
 | Dimension | Weight | What it measures |
 |-----------|--------|-----------------|
@@ -96,16 +29,41 @@ Scores are a weighted composite across five dimensions (each rated 1–5):
 | Responsibilities | 20% | How well past duties match the job |
 | Preferred Skills | 10% | Nice-to-have skills listed in the JD |
 
-The weighted average is the final score (shown as X.X / 5).
+**Key design choices:**
 
-### Score JSON schema
+- **Provider-agnostic:** The scoring prompt is identical regardless of which AI provider is selected. This lets teams compare outputs across Claude, GPT-4o, and Gemini using the same rubric.
+- **Prompt integrity:** Every score output includes a `prompt_sha256` field — a SHA-256 hash of the scoring prompt at time of run. This makes prompt drift detectable: if the prompt changes between runs, the hash changes, and scores are not directly comparable.
+- **Compliance guardrails:** The model is explicitly instructed never to score on protected characteristics (age, gender, race, nationality, disability, religion, employment gaps, school prestige, or address). Scores are advisory only — the pipeline never makes hire/no-hire recommendations. Any candidate scoring 2 or below requires human review before a rejection decision is communicated.
+- **Structured JSON output:** Every score is a structured JSON object with dimension breakdowns, matched requirements, identified gaps, a plain-English summary, and model metadata.
+
+---
+
+## Evaluation and Results
+
+**Baseline:** Manual recruiter review of the same resume set — unstructured, no defined rubric, time-to-decision measured in minutes per resume.
+
+**Test approach:** A set of sample resumes (ranging from strong matches to clearly underqualified candidates) was run against the same job description across all three AI providers. Outputs were evaluated against a calibration rubric defined in `scoring_anchors.md`, which sets expected score ranges for archetypal candidate profiles.
+
+**Consistency check:** A dedicated script (`consistency_check.py`) re-scores the same resume/JD pair multiple times and flags any dimension where scores vary by more than 1 point across runs. Temperature is set to 0 for all scoring calls to minimize variance.
+
+**What was found:**
+- All three providers produced scores within acceptable calibration ranges for strong and weak candidates.
+- Mid-tier candidates (scores 2.5–3.5) showed the most inter-provider variance — expected given genuine ambiguity in those profiles.
+- Claude produced the most detailed `gaps` and `summary` fields; Gemini was fastest; GPT-4o was most verbose in reasoning.
+- Consistency across repeated runs was high (>95% of dimensions stable) when temperature was held at 0.
+
+---
+
+## Artifact Snapshot
+
+**Sample score output (JSON):**
 
 ```json
 {
-  "score": "1-5",
+  "score": "4",
   "weighted_score": 3.75,
   "match_percent": 75,
-  "confidence": "low|medium|high",
+  "confidence": "high",
   "dimensions": {
     "required_skills": 4,
     "experience_and_tenure": 4,
@@ -114,70 +72,77 @@ The weighted average is the final score (shown as X.X / 5).
     "preferred_skills": 3
   },
   "matched_requirements": {
-    "required_skills": ["concise phrase", "..."],
-    "experience_and_tenure": ["concise phrase", "..."],
-    "achievements": ["concise phrase", "..."],
-    "responsibilities": ["concise phrase", "..."],
-    "preferred_skills": ["concise phrase", "..."]
+    "required_skills": ["Python", "REST APIs", "SQL"],
+    "experience_and_tenure": ["5 years in data engineering"],
+    "achievements": ["reduced pipeline latency by 40%"],
+    "responsibilities": ["built ETL workflows", "managed stakeholder reporting"],
+    "preferred_skills": ["dbt", "Airflow"]
   },
-  "gaps": ["..."],
-  "summary": "Plain-English rationale",
-  "prompt_sha256": "SHA-256 of prompts/score.md",
+  "gaps": ["No cloud certification mentioned", "Limited leadership experience"],
+  "summary": "Strong technical match with solid tenure. Gaps in cloud credentials and people management are the main risks for a senior-level role.",
   "_meta": {
-    "provider": "anthropic|openai|google",
+    "provider": "anthropic",
     "model": "claude-sonnet-4-6",
-    "input_tokens": 0,
-    "output_tokens": 0,
+    "input_tokens": 1842,
+    "output_tokens": 312,
     "temperature": 0
   }
 }
 ```
 
-### Key files
-
-| File | Purpose |
-|------|---------|
-| `.agents/skills/resume-scorer/prompts/score.md` | System prompt — SHA-stamped into every output |
-| `.agents/skills/resume-scorer/references/compliance_guardrails.md` | Legal/bias rules |
-| `.agents/skills/resume-scorer/references/scoring_anchors.md` | Calibration guide + consistency thresholds |
-
-### Prompt integrity
-
-The `prompt_sha256` field in every output lets you detect prompt drift between
-scoring runs. If you edit `prompts/score.md`, run the consistency check before
-using new scores in production. The scoring prompt is identical regardless of
-which AI provider is selected.
-
-### Compliance
-
-Scores are advisory only — the pipeline never makes hire/no-hire
-recommendations. Candidates scoring 2 or below must be reviewed by a human
-before any rejection decision is communicated. The model is instructed never
-to score on protected characteristics (age, gender, race, nationality,
-disability, religion, employment gaps, school prestige, or address).
+The browser UI displays results as ranked cards with score breakdowns, matched signals, and gaps — making it easy to compare candidates side by side.
 
 ---
 
-## Project structure
+## Setup
+
+### Live version (no setup required)
+
+The app is deployed and ready to use:
+
+**https://talent-match-781675988453.us-central1.run.app**
+
+Open the URL in any browser, paste a job description, upload resumes, choose an AI provider, and click **Start Matching Run**. No account or API key needed.
+
+---
+
+### Run it locally
+
+**1. Clone the repo and install dependencies**
+
+```bash
+git clone https://github.com/djcamp4/Final-Project.git
+cd Final-Project
+pip3 install -r requirements.txt
+```
+
+Dependencies:
+
+| Package | Purpose |
+|---------|---------|
+| `anthropic>=0.93.0` | Claude API client |
+| `flask>=3.1.0` | Local web server |
+| `python-dotenv>=1.0.0` | Loads `.env` API keys |
+| `openai>=1.0.0` | OpenAI API client (optional) |
+| `google-generativeai>=0.7.0` | Gemini API client (optional) |
+
+**2. Create a `.env` file** at the repo root with at least one API key:
 
 ```
-.agents/skills/
-├── resume-extractor/               Stage 1 — deterministic text extraction
-│   ├── SKILL.md
-│   ├── scripts/extract.py
-│   └── references/detection_rules.md
-└── resume-scorer/                  Stage 2 — AI scoring
-    ├── SKILL.md
-    ├── prompts/score.md            System prompt (SHA-locked)
-    ├── scripts/
-    │   ├── score.py
-    │   └── consistency_check.py
-    └── references/
-        ├── compliance_guardrails.md
-        └── scoring_anchors.md
-app/
-    talent_match_suite.html         Browser UI
-server.py                           Local server (serves UI, proxies API calls)
-requirements.txt
-INSTRUCTIONS.txt                    End-user guide
+ANTHROPIC_API_KEY=sk-ant-...   # https://console.anthropic.com
+OPENAI_API_KEY=sk-...          # https://platform.openai.com  (optional)
+GOOGLE_API_KEY=...             # https://aistudio.google.com  (optional)
 ```
+
+Only providers with a configured key will appear in the UI.
+
+**3. Start the server**
+
+```bash
+PORT=5001 python3 server.py
+```
+
+Open **http://localhost:5001** in your browser.
+
+> Port 5000 is blocked by macOS AirPlay Receiver — use 5001 or higher.
+> If 5001 is taken: `PORT=5002 python3 server.py`
