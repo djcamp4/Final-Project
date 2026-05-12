@@ -393,6 +393,7 @@ async function hw4Extract(file, ext) {
 
 // ─── App state ────────────────────────────────────────────────────────
 let files=[]; let allResults=[]; let insightsPool=[]; let starred=new Set(); let sortDesc=true;
+let stopRequested=false; let activeAbort=null;
 
 const AV_COLORS=[
   ['#d5e4f0','#2a5070'],['#d5f0e5','#1a6040'],['#f0daf0','#602870'],
@@ -554,20 +555,32 @@ function syncBtn(){
 document.getElementById('jdInput').addEventListener('input',syncBtn);
 
 // ─── Scoring ──────────────────────────────────────────────────────────
+function stopRun(){
+  stopRequested=true;
+  if(activeAbort) activeAbort.abort();
+  const btn=document.getElementById('startBtn');
+  btn.textContent='Stopping…'; btn.disabled=true;
+}
+
 async function startRun(){
   const jd=document.getElementById('jdInput').value.trim();
   const selected=files.map((u,i)=>({u,i})).filter(({i})=>document.getElementById(`cb_${i}`)?.checked);
   if(!selected.length){alert('Select at least one candidate.');return;}
 
   allResults=[];
+  stopRequested=false;
+  activeAbort=null;
   document.getElementById('resultsScroll').style.display='block';
   document.getElementById('resultsEmpty').style.display='none';
   document.getElementById('resultsBody').innerHTML='';
 
   const btn=document.getElementById('startBtn'), prog=document.getElementById('progressWrap');
-  btn.disabled=true; btn.textContent='Running…'; prog.style.display='block';
+  btn.disabled=false; btn.textContent='Stop Run';
+  btn.onclick=stopRun; btn.style.background='#c0392b';
+  prog.style.display='block';
 
   for(let k=0;k<selected.length;k++){
+    if(stopRequested) break;
     const {u}=selected[k];
     const pct=Math.round(k/selected.length*100);
     prog.innerHTML=`<div class="prog-wrap"><div class="spinner" style="width:15px;height:15px"></div><div style="flex:1"><div style="font-size:11.5px;margin-bottom:3px">Scoring <strong>${u.dn}</strong> (${k+1}/${selected.length})</div><div class="pb-bg"><div class="pb-fill" style="width:${pct}%"></div></div></div><span style="font-size:11px;font-weight:700;color:#7a9ab0">${pct}%</span></div>`;
@@ -578,22 +591,33 @@ async function startRun(){
       const pi=insightsPool.findIndex(x=>x.fn===r.fn);
       if(pi>=0) insightsPool[pi]=r; else insightsPool.push(r);
     } catch(e) {
+      if(stopRequested) break;
       const errR={dn:u.dn,fn:u.name,match_percent:0,score:0,weighted_score:0,dimensions:{},matched_requirements:[],gaps:[],summary:'Error: '+e.message,hw4Flags:u.hw4?.flags||[],injPhrases:u.hw4?.injectionPhrases||[]};
       allResults.push(errR);
     }
     renderResults();
   }
 
-  prog.innerHTML=`<div class="prog-wrap" style="background:#f0faf6"><span style="font-weight:700;color:#0d7a5e;font-size:12px">✓ Complete — ${allResults.length} candidate${allResults.length!==1?'s':''} scored</span></div>`;
+  const stopped=stopRequested;
+  stopRequested=false; activeAbort=null;
+  btn.style.background=''; btn.onclick=startRun;
+
+  if(stopped){
+    prog.innerHTML=`<div class="prog-wrap" style="background:#fff5f5"><span style="font-weight:700;color:#c0392b;font-size:12px">⏹ Stopped — ${allResults.length} candidate${allResults.length!==1?'s':''} scored</span></div>`;
+  } else {
+    prog.innerHTML=`<div class="prog-wrap" style="background:#f0faf6"><span style="font-weight:700;color:#0d7a5e;font-size:12px">✓ Complete — ${allResults.length} candidate${allResults.length!==1?'s':''} scored</span></div>`;
+  }
   btn.disabled=false; btn.textContent='Start Matching Run';
   renderInsights();
 }
 
 async function scoreResume(text,jd,name,hw4Flags){
+  activeAbort=new AbortController();
   const resp=await fetch('/api/score',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({resume_text:text,jd_text:jd})
+    body:JSON.stringify({resume_text:text,jd_text:jd}),
+    signal:activeAbort.signal
   });
   const data=await resp.json();
   if(!resp.ok) throw new Error(data.error||`HTTP ${resp.status}`);
