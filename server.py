@@ -98,7 +98,10 @@ def parse_llm_json(raw: str) -> dict:
     raw = raw.strip()
     if raw.startswith("```"):
         lines = raw.splitlines()
-        raw = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
+        inner = lines[1:-1] if lines[-1].strip() == "```" else lines[1:]
+        raw = "\n".join(inner).strip()
+    if not raw:
+        raise json.JSONDecodeError("Model returned an empty response", "", 0)
     return json.loads(raw)
 
 
@@ -112,19 +115,35 @@ def score_anthropic(prompt_text, user_msg, model):
     except ImportError:
         raise RuntimeError("anthropic not installed — run: pip3 install anthropic")
 
-    client   = _anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-    response = client.messages.create(
-        model=model,
-        max_tokens=8192,
-        temperature=0,
-        system=[{
-            "type": "text",
-            "text": prompt_text,
-            "cache_control": {"type": "ephemeral"},
-        }],
-        messages=[{"role": "user", "content": user_msg}],
-    )
-    raw   = response.content[0].text
+    client = _anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+
+    for attempt in range(2):
+        response = client.messages.create(
+            model=model,
+            max_tokens=8192,
+            temperature=0,
+            system=[{
+                "type": "text",
+                "text": prompt_text,
+                "cache_control": {"type": "ephemeral"},
+            }],
+            messages=[{"role": "user", "content": user_msg}],
+        )
+
+        if response.stop_reason == "max_tokens":
+            raise RuntimeError("Model hit max_tokens limit — response was truncated. Try a shorter resume or job description.")
+
+        raw = response.content[0].text if response.content else ""
+
+        if raw.strip():
+            break
+
+        if attempt == 0:
+            print(f"Empty response from Claude (attempt 1), retrying...")
+
+    if not raw.strip():
+        raise RuntimeError("Claude returned an empty response after 2 attempts.")
+
     usage = response.usage
     meta  = {
         "input_tokens":                usage.input_tokens,
