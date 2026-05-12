@@ -65,6 +65,10 @@ A two-stage agentic pipeline that extracts resume text and scores it against a j
 
 ## Artifact Snapshot
 
+**Demo video:**
+
+[![Talent Match Suite Demo](https://img.youtube.com/vi/ferXWUujnGc/0.jpg)](https://youtu.be/ferXWUujnGc)
+
 **Sample score output (JSON):**
 
 ```json
