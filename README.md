@@ -8,7 +8,7 @@ A two-stage agentic pipeline that extracts resume text and scores it against a j
 
 **Who the user is:** Recruiters, hiring managers, and talent acquisition teams responsible for screening applicants — often under time pressure and working through high volumes of resumes for competitive roles.
 
-**The workflow being improved:** Traditional resume review is manual, inconsistent, and slow. A recruiter evaluating 50+ applicants for the same role will inevitably apply different standards across candidates, miss relevant signals buried in dense documents, and spend hours on work that doesn't require human judgment. The process is also legally risky — unstructured human review is more susceptible to unconscious bias.
+**The workflow being improved:** Traditional resume review is manual, inconsistent, and slow. A recruiter evaluating 50+ applicants for the same role will inevitably apply different standards across candidates, miss relevant signals buried in dense documents, and spend hours on work that doesn't require human judgment. 
 
 **Why it matters:** Faster, more consistent screening means better hiring decisions and a fairer process for candidates. By automating the extract-and-score pipeline, this tool lets a recruiter focus their time on the candidates who actually matter, with structured evidence explaining why.
 
